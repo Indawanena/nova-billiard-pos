@@ -1,5 +1,5 @@
 {
-  "name": "chalkboard.id",
+  "name": "nova-billiard-pos",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -50,7 +50,10 @@
     "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
     "tauri:build:macos": "tauri build --target x86_64-apple-darwin",
     "tauri:build:macos-arm": "tauri build --target aarch64-apple-darwin",
-    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu"
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "test:db:up": "docker compose -f docker-compose.test.yml up -d postgres",
+    "test:db:down": "docker compose -f docker-compose.test.yml down -v",
+    "test:db": "node scripts/run-db-tests.js"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",

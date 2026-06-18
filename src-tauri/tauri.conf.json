@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Chalkboard",
+  "productName": "Nova Billiard POS",
   "version": "1.0.0",
-  "identifier": "com.kugie.chalkboard",
+  "identifier": "com.nova.billiardpos",
   "build": {
     "frontendDist": "frontend",
     "devUrl": "http://localhost:3000",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Chalkboard - Billiard Hall Management",
+        "title": "Nova Billiard POS - Billiard Hall Management",
         "width": 1400,
         "height": 900,
         "minWidth": 1024,

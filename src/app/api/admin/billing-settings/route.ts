@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { getBillingRateType, setBillingRateType, BillingRateType } from '@/lib/settings';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     const billingRateType = await getBillingRateType();
     
@@ -22,10 +20,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     const { billingRateType } = await request.json();
 

@@ -1,6 +1,6 @@
 services:
   # Default service (auto mode)
-  chalkboard:
+  nova-billiard-pos:
     platform: linux/amd64
     build:
       context: .
@@ -9,20 +9,16 @@ services:
         - DATABASE_URL=${DATABASE_URL:-postgresql://username:password@host:5432/database}
         - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret}
         - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-        - DEFAULT_EMAIL=${DEFAULT_EMAIL:-admin@example.com}
-        - DEFAULT_PASSWORD=${DEFAULT_PASSWORD:-admin123}
         - DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-auto}
         - USE_SERVERLESS_DB=${USE_SERVERLESS_DB:-false}
         - DB_POOLING=${DB_POOLING:-true}
     ports:
       - "3000:3000"
-    image: kugieapp/chalkboard:latest
+    image: indawanena/nova-billiard-pos:latest
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://username:password@host:5432/database}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - DEFAULT_EMAIL=${DEFAULT_EMAIL:-admin@example.com}
-      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD:-admin123}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-auto}
       - USE_SERVERLESS_DB=${USE_SERVERLESS_DB:-false}
       - DB_POOLING=${DB_POOLING:-true}

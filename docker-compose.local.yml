@@ -3,10 +3,10 @@ services:
   # PostgreSQL database for standalone deployment
   postgres:
     image: postgres:15
-    container_name: chalkboard-postgres
+    container_name: nova-billiard-pos-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: chalkboard
+      POSTGRES_DB: nova_billiard_pos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -16,9 +16,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
     networks:
-      - chalkboard-network
+      - nova-billiard-pos-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d chalkboard"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nova_billiard_pos"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -27,18 +27,18 @@ services:
   # pgAdmin for database management (optional)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: chalkboard-pgadmin
+    container_name: nova-billiard-pos-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@chalkboard.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-operator@nova-billiard.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Set PGADMIN_DEFAULT_PASSWORD before starting pgAdmin}
       PGADMIN_LISTEN_PORT: 80
     ports:
       - "8080:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
-      - chalkboard-network
+      - nova-billiard-pos-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,14 +46,14 @@ services:
   # Redis for caching (optional)
   redis:
     image: redis:7-alpine
-    container_name: chalkboard-redis
+    container_name: nova-billiard-pos-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - chalkboard-network
+      - nova-billiard-pos-network
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -63,13 +63,13 @@ services:
 
 volumes:
   postgres_data:
-    name: chalkboard_postgres_data
+    name: nova_billiard_pos_postgres_data
   pgadmin_data:
-    name: chalkboard_pgadmin_data
+    name: nova_billiard_pos_pgadmin_data
   redis_data:
-    name: chalkboard_redis_data
+    name: nova_billiard_pos_redis_data
 
 networks:
-  chalkboard-network:
-    name: chalkboard-network
+  nova-billiard-pos-network:
+    name: nova-billiard-pos-network
     driver: bridge

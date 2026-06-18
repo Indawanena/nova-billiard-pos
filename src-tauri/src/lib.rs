@@ -18,7 +18,7 @@ pub fn run() {
   let shutdown_next_server = Arc::clone(&next_server);
 
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![print_receipt_raw])
+    .invoke_handler(tauri::generate_handler![print_receipt_raw, print_receipt_lan])
     .setup(move |app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -68,6 +68,22 @@ fn print_receipt_raw(receipt: String, printer_name: Option<String>) -> Result<()
   }
 }
 
+#[tauri::command]
+fn print_receipt_lan(receipt: String, host: String, port: u16) -> Result<(), String> {
+  let address = format!("{}:{}", host.trim(), port);
+  let mut stream = TcpStream::connect(&address)
+    .map_err(|error| format!("Failed to connect to LAN printer at {address}: {error}"))?;
+
+  stream
+    .write_all(receipt.as_bytes())
+    .map_err(|error| format!("Failed to send receipt to LAN printer: {error}"))?;
+  stream
+    .write_all(b"\n")
+    .map_err(|error| format!("Failed to finish LAN printer receipt: {error}"))?;
+
+  Ok(())
+}
+
 fn start_next_server<R: Runtime>(
   app: AppHandle<R>,
   next_server: Arc<Mutex<Option<Child>>>,
@@ -80,8 +96,8 @@ fn start_next_server<R: Runtime>(
   let node_path = standalone_dir.join("node.exe");
   log_startup(&format!("standalone dir: {}", standalone_dir.display()));
 
-  let stdout = File::create(std::env::temp_dir().join("chalkboard-next.out.log"))?;
-  let stderr = File::create(std::env::temp_dir().join("chalkboard-next.err.log"))?;
+  let stdout = File::create(std::env::temp_dir().join("nova-billiard-pos-next.out.log"))?;
+  let stderr = File::create(std::env::temp_dir().join("nova-billiard-pos-next.err.log"))?;
 
   let mut child = Command::new(node_path)
     .arg("server.js")
@@ -90,7 +106,7 @@ fn start_next_server<R: Runtime>(
     .env("HOSTNAME", "127.0.0.1")
     .env("DEPLOYMENT_MODE", "desktop")
     .env("NEXTAUTH_URL", format!("http://127.0.0.1:{port}"))
-    .env("NEXTAUTH_SECRET", "chalkboard-desktop-secret")
+    .env("NEXTAUTH_SECRET", "nova-billiard-pos-desktop-secret")
     .stdin(Stdio::null())
     .stdout(Stdio::from(stdout))
     .stderr(Stdio::from(stderr))
@@ -185,7 +201,7 @@ mod raw_print {
       return Err(format!("Failed to open printer '{printer_name}'").into());
     }
 
-    let mut doc_name = wide_null("Chalkboard Receipt");
+    let mut doc_name = wide_null("Nova Billiard POS Receipt");
     let mut data_type = wide_null("RAW");
     let doc_info = DOC_INFO_1W {
       pDocName: doc_name.as_mut_ptr(),
@@ -306,7 +322,7 @@ fn log_startup(message: &str) {
   if let Ok(mut file) = OpenOptions::new()
     .create(true)
     .append(true)
-    .open(std::env::temp_dir().join("chalkboard-desktop.log"))
+    .open(std::env::temp_dir().join("nova-billiard-pos-desktop.log"))
   {
     let _ = writeln!(file, "{message}");
   }

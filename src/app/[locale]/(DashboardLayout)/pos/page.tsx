@@ -84,6 +84,12 @@ interface PendingTransaction {
   createdAt: string;
 }
 
+interface PaymentMethodOption {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
 const FnBPOS = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -96,6 +102,7 @@ const FnBPOS = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [draftOrders, setDraftOrders] = useState<DraftOrder[]>([]);
   const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<PaymentMethodOption[]>([]);
   const [taxSettings, setTaxSettings] = useState<TaxSettings>({
     enabled: false,
     percentage: 11,
@@ -109,14 +116,14 @@ const FnBPOS = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [showDraftOrdersModal, setShowDraftOrdersModal] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  
+
   // Draft order assignment form state
   const [draftAssignments, setDraftAssignments] = useState<{[orderId: number]: {
     selectedTableId: string;
     selectedTransactionId: string;
     selectedStaffId: string;
   }}>({});
-  
+
   // Enhanced order form data
   const [orderData, setOrderData] = useState({
     context: 'standalone', // 'standalone', 'waiting', 'table_session', 'pending_transaction'
@@ -139,20 +146,38 @@ const FnBPOS = () => {
   // Fetch data
   const fetchData = async () => {
     try {
-      const [categoriesRes, itemsRes, tablesRes, staffRes, draftOrdersRes, pendingTransactionsRes, taxRes] = await Promise.all([
+      const [categoriesRes, itemsRes, tablesRes, staffRes, draftOrdersRes, pendingTransactionsRes, taxRes, paymentMethodsRes] = await Promise.all([
         fetch('/api/fnb/categories'),
         fetch('/api/fnb/items'),
         fetch('/api/tables'),
         fetch('/api/staff'),
         fetch('/api/fnb/orders/drafts'),
         fetch('/api/fnb/orders/pending-transactions'),
-        fetch('/api/settings/tax')
+        fetch('/api/settings/tax'),
+        fetch('/api/settings/payment-methods')
       ]);
 
       // Fetch tax settings
       if (taxRes.ok) {
         const taxSettingsData = await taxRes.json();
         setTaxSettings(taxSettingsData);
+      }
+
+      if (paymentMethodsRes.ok) {
+        const paymentMethodsData = await paymentMethodsRes.json();
+        const methods = (paymentMethodsData.methods || []).filter((method: PaymentMethodOption) => method.enabled);
+        setPaymentMethodOptions(methods);
+        setOrderData((current) => {
+          const currentMethod = current.paymentMethods[0]?.type;
+          const nextMethod = methods.some((method: PaymentMethodOption) => method.id === currentMethod)
+            ? currentMethod
+            : methods[0]?.id || 'cash';
+
+          return {
+            ...current,
+            paymentMethods: [{ type: nextMethod, amount: current.paymentMethods[0]?.amount || 0 }],
+          };
+        });
       }
 
       if (categoriesRes.ok) {
@@ -213,14 +238,14 @@ const FnBPOS = () => {
     }
 
     const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    
+
     if (existingItem) {
       if (existingItem.quantity >= item.stockQuantity) {
         showAlert('error', tAlerts('notEnoughStock'));
         return;
       }
-      setCart(cart.map(cartItem => 
-        cartItem.id === item.id 
+      setCart(cart.map(cartItem =>
+        cartItem.id === item.id
           ? { ...cartItem, quantity: cartItem.quantity + 1 }
           : cartItem
       ));
@@ -251,8 +276,8 @@ const FnBPOS = () => {
       return;
     }
 
-    setCart(cart.map(cartItem => 
-      cartItem.id === itemId 
+    setCart(cart.map(cartItem =>
+      cartItem.id === itemId
         ? { ...cartItem, quantity }
         : cartItem
     ));
@@ -296,6 +321,7 @@ const FnBPOS = () => {
       const subtotal = calculateTotal();
       const tax = calculateOrderTax(subtotal);
       const total = subtotal + tax;
+      const selectedPaymentMethod = orderData.paymentMethods[0]?.type || paymentMethodOptions[0]?.id || 'cash';
 
       // For pending transactions, create as draft first, then assign to transaction
       if (orderData.context === 'pending_transaction') {
@@ -326,14 +352,14 @@ const FnBPOS = () => {
 
         if (draftResponse.ok) {
           const draftResult = await draftResponse.json();
-          
+
           // Immediately assign to pending transaction
           const assignResponse = await fetch(`/api/fnb/orders/${draftResult.id}/assign-transaction`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              transactionId: parseInt(orderData.transactionId), 
-              staffId: parseInt(orderData.staffId) 
+            body: JSON.stringify({
+              transactionId: parseInt(orderData.transactionId),
+              staffId: parseInt(orderData.staffId)
             })
           });
 
@@ -366,7 +392,9 @@ const FnBPOS = () => {
         tax: tax.toFixed(2),
         total: total.toFixed(2),
         notes: orderData.notes || null,
-        paymentMethods: orderData.context === 'standalone' ? orderData.paymentMethods : null,
+        paymentMethods: orderData.context === 'standalone'
+          ? [{ type: selectedPaymentMethod, amount: total.toFixed(2) }]
+          : null,
         items: cart.map(item => ({
           itemId: item.id,
           quantity: item.quantity,
@@ -383,18 +411,18 @@ const FnBPOS = () => {
 
       if (response.ok) {
         const orderResult = await response.json();
-        const orderType = orderData.context === 'standalone' ? t('orderCreated') : 
+        const orderType = orderData.context === 'standalone' ? t('orderCreated') :
                          orderData.context === 'waiting' ? t('draftOrderCreated') : t('tableOrderCreated');
-        
+
         // Enhanced success message for standalone orders
         if (orderData.context === 'standalone' && orderResult.paymentRecord) {
-          showAlert('success', 
+          showAlert('success',
             `${orderType}. ${t('orderNumber', { orderNumber: orderResult.orderNumber })}`
           );
         } else {
           showAlert('success', `${orderType}. ${t('orderNumber', { orderNumber: orderResult.orderNumber })}`);
         }
-        
+
         clearCart();
         resetOrderForm();
         setShowCheckoutModal(false);
@@ -503,6 +531,8 @@ const FnBPOS = () => {
   };
 
   const resetOrderForm = () => {
+    const defaultPaymentMethod = paymentMethodOptions[0]?.id || 'cash';
+
     setOrderData({
       context: 'standalone',
       customerName: '',
@@ -510,7 +540,7 @@ const FnBPOS = () => {
       tableId: '',
       transactionId: '',
       staffId: '',
-      paymentMethods: [{ type: 'cash', amount: 0 }],
+      paymentMethods: [{ type: defaultPaymentMethod, amount: 0 }],
       notes: ''
     });
   };
@@ -546,7 +576,7 @@ const FnBPOS = () => {
     }
   };
 
-  const filteredItems = items.filter(item => 
+  const filteredItems = items.filter(item =>
     activeCategory ? item.categoryId === activeCategory : true
   );
 
@@ -607,7 +637,7 @@ const FnBPOS = () => {
             <h3 className="text-lg font-semibold text-dark dark:text-white mb-4">
               Menu Items
             </h3>
-            
+
             {/* Categories */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
               <Button
@@ -636,7 +666,7 @@ const FnBPOS = () => {
               {filteredItems.map(item => {
                 const stockStatus = getStockStatus(item);
                 const isOutOfStock = item.stockQuantity <= 0;
-                
+
                 return (
                   <div
                     key={item.id}
@@ -653,21 +683,21 @@ const FnBPOS = () => {
                         <h4 className="font-semibold text-dark dark:text-white text-sm truncate">
                           {item.name}
                         </h4>
-                        <Badge 
-                          color={stockStatus.color} 
+                        <Badge
+                          color={stockStatus.color}
                           size="xs"
                           style={{ backgroundColor: stockStatus.textColor, color: 'white' }}
                         >
                           {stockStatus.text}
                         </Badge>
                       </div>
-                      
+
                       {item.description && (
                         <p className="text-xs text-bodytext mb-1 line-clamp-1">
                           {item.description}
                         </p>
                       )}
-                      
+
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-bold text-primary text-sm">
@@ -679,7 +709,7 @@ const FnBPOS = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {!isOutOfStock && (
                       <Button
                         color="primary"
@@ -795,8 +825,8 @@ const FnBPOS = () => {
 
                   {/* Quick Action Buttons */}
                   <div className="space-y-2">
-                    <Button 
-                      color="primary" 
+                    <Button
+                      color="primary"
                       onClick={() => setShowCheckoutModal(true)}
                       className="w-full"
                       size="sm"
@@ -804,17 +834,17 @@ const FnBPOS = () => {
                       <IconShoppingCart className="w-4 h-4 mr-2" />
                       {t('checkout.button', { total: formatCurrency(calculateTotal() + calculateOrderTax(calculateTotal())) })}
                     </Button>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
-                      <Button 
-                        color="gray" 
+                      <Button
+                        color="gray"
                         onClick={() => setShowDraftOrdersModal(true)}
                         size="xs"
                       >
                         <IconClock className="w-3 h-3 mr-1" />
                         {t('draftOrders', { count: draftOrders.length })}
                       </Button>
-                      <Button 
+                      <Button
                         color="secondary"
                         onClick={clearCart}
                         size="xs"
@@ -844,8 +874,8 @@ const FnBPOS = () => {
                 <button
                   type="button"
                   className={`p-3 border-2 rounded-lg text-center transition-colors ${
-                    orderData.context === 'standalone' 
-                      ? 'border-primary bg-lightprimary text-primary' 
+                    orderData.context === 'standalone'
+                      ? 'border-primary bg-lightprimary text-primary'
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                   onClick={() => setOrderData({ ...orderData, context: 'standalone', tableId: '', transactionId: '' })}
@@ -857,8 +887,8 @@ const FnBPOS = () => {
                 <button
                   type="button"
                   className={`p-3 border-2 rounded-lg text-center transition-colors ${
-                    orderData.context === 'waiting' 
-                      ? 'border-primary bg-lightprimary text-primary' 
+                    orderData.context === 'waiting'
+                      ? 'border-primary bg-lightprimary text-primary'
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                   onClick={() => setOrderData({ ...orderData, context: 'waiting', tableId: '', transactionId: '' })}
@@ -870,8 +900,8 @@ const FnBPOS = () => {
                 <button
                   type="button"
                   className={`p-3 border-2 rounded-lg text-center transition-colors ${
-                    orderData.context === 'table_session' 
-                      ? 'border-primary bg-lightprimary text-primary' 
+                    orderData.context === 'table_session'
+                      ? 'border-primary bg-lightprimary text-primary'
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                   onClick={() => setOrderData({ ...orderData, context: 'table_session', transactionId: '' })}
@@ -883,8 +913,8 @@ const FnBPOS = () => {
                 <button
                   type="button"
                   className={`p-3 border-2 rounded-lg text-center transition-colors ${
-                    orderData.context === 'pending_transaction' 
-                      ? 'border-primary bg-lightprimary text-primary' 
+                    orderData.context === 'pending_transaction'
+                      ? 'border-primary bg-lightprimary text-primary'
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                   onClick={() => setOrderData({ ...orderData, context: 'pending_transaction', tableId: '' })}
@@ -917,7 +947,7 @@ const FnBPOS = () => {
                 />
               </div>
             </div>
-            
+
             {orderData.context === 'table_session' && (
               <div>
                 <Label htmlFor="tableId" value={t('checkout.tableAssignment')} />
@@ -931,8 +961,8 @@ const FnBPOS = () => {
                   {tables.map(table => {
                     const tableStatus = getTableStatus(table);
                     return (
-                      <option 
-                        key={table.id} 
+                      <option
+                        key={table.id}
                         value={table.id}
                         disabled={tableStatus.disabled}
                       >
@@ -957,11 +987,11 @@ const FnBPOS = () => {
                 >
                   <option value="">{t('checkout.selectTransaction')}</option>
                   {pendingTransactions.map(transaction => (
-                    <option 
-                      key={transaction.id} 
+                    <option
+                      key={transaction.id}
                       value={transaction.id}
                     >
-                      💳 {transaction.transactionNumber} - {transaction.customerName} 
+                      💳 {transaction.transactionNumber} - {transaction.customerName}
                       ({formatCurrency(parseFloat(transaction.totalAmount))})
                       {transaction.customerPhone && ` - ${transaction.customerPhone}`}
                     </option>
@@ -993,6 +1023,31 @@ const FnBPOS = () => {
                 ))}
               </Select>
             </div>
+
+            {orderData.context === 'standalone' && (
+              <div>
+                <Label htmlFor="paymentMethod" value={t('checkout.paymentMethod')} />
+                <Select
+                  id="paymentMethod"
+                  value={orderData.paymentMethods[0]?.type || paymentMethodOptions[0]?.id || 'cash'}
+                  onChange={(e) => setOrderData({
+                    ...orderData,
+                    paymentMethods: [{ type: e.target.value, amount: orderData.paymentMethods[0]?.amount || 0 }]
+                  })}
+                  required
+                >
+                  {paymentMethodOptions.length > 0 ? (
+                    paymentMethodOptions.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="cash">Cash</option>
+                  )}
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="notes" value={t('checkout.notes')} />
@@ -1064,8 +1119,8 @@ const FnBPOS = () => {
         <Modal.Footer>
           <Button color="primary" onClick={processOrder}>
             <IconReceipt className="w-4 h-4 mr-2" />
-            {orderData.context === 'standalone' ? t('checkout.buttons.processPayment') : 
-             orderData.context === 'waiting' ? t('checkout.buttons.saveAsDraft') : 
+            {orderData.context === 'standalone' ? t('checkout.buttons.processPayment') :
+             orderData.context === 'waiting' ? t('checkout.buttons.saveAsDraft') :
              orderData.context === 'table_session' ? t('checkout.buttons.addToTableBill') :
              t('checkout.buttons.addToTransaction')}
           </Button>
@@ -1106,7 +1161,7 @@ const FnBPOS = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     {order.notes && (
                       <div className="mb-3 p-2 bg-lightinfo rounded text-sm">
                         <IconNotes className="w-4 h-4 inline mr-1" />
@@ -1135,7 +1190,7 @@ const FnBPOS = () => {
 
                       {/* Assignment Options Header */}
                       <div className="text-sm font-medium text-bodytext">{t('draftOrdersModal.assignmentOptions')}</div>
-                      
+
                       {/* Table Assignment */}
                       <div className="space-y-2 p-3 border rounded-lg">
                         <div className="flex items-center gap-2">
@@ -1184,7 +1239,7 @@ const FnBPOS = () => {
                             <option value="">{t('draftOrdersModal.selectTransaction')}</option>
                             {pendingTransactions.map(transaction => (
                               <option key={transaction.id} value={transaction.id}>
-                                💳 {transaction.transactionNumber} - {transaction.customerName} 
+                                💳 {transaction.transactionNumber} - {transaction.customerName}
                                 ({formatCurrency(parseFloat(transaction.totalAmount))})
                               </option>
                             ))}
@@ -1221,4 +1276,4 @@ const FnBPOS = () => {
   );
 };
 
-export default FnBPOS; 
+export default FnBPOS;

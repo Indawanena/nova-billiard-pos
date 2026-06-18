@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { systemSettings } from '@/schema/settings';
 import { eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { requireAuth, requireAdmin } from '@/lib/api-auth';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
 
     // Get tax settings
     const settings = await db.select().from(systemSettings).where(
@@ -39,10 +37,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
     const { enabled, percentage, name, applyToTables, applyToFnb } = body;

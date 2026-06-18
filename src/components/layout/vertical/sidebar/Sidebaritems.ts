@@ -32,41 +32,22 @@ const SidebarContent: MenuItem[] = [
         url: "/dashboard",
       },
       {
-        name: "Tables",
-        icon: "solar:tablet-outline",
+        name: "POS Terminal",
+        icon: "solar:cart-large-2-line-duotone",
         id: uniqueId(),
-        url: "/tables",
-      },
-      {
-        name: "F&B",
-        icon: "solar:cup-hot-line-duotone",
-        id: uniqueId(),
-        children: [
-          {
-            name: "Menu Management",
-            icon: "solar:book-2-bold",
-            id: uniqueId(),
-            url: "/fnb",
-          },
-          {
-            name: "POS System",
-            icon: "solar:cart-line-duotone",
-            id: uniqueId(),
-            url: "/pos",
-          },
-        ]
-      },
-      {
-        name: "Transactions",
-        icon: "solar:card-line-duotone",
-        id: uniqueId(),
-        url: "/transactions",
+        url: "/pos-terminal",
       },
     ],
   },
   {
     heading: "Reports",
     children: [
+      {
+        name: "Transactions",
+        icon: "solar:card-line-duotone",
+        id: uniqueId(),
+        url: "/transactions",
+      },
       {
         name: "Analytics",
         icon: "solar:chart-line-duotone",
@@ -84,6 +65,12 @@ const SidebarContent: MenuItem[] = [
   {
     heading: "Settings",
     children: [
+      {
+        name: "Menu Management",
+        icon: "solar:book-2-bold",
+        id: uniqueId(),
+        url: "/fnb",
+      },
       {
         name: "Pricing Packages",
         icon: "solar:tag-price-line-duotone",

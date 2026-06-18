@@ -4,7 +4,7 @@
 
 import { GET } from './route';
 import { testApi, expectApiSuccess, expectApiError } from '@/test/utils/api';
-import { getTestDatabase, cleanupDatabase, closeTestDatabase } from '@/test/utils/db';
+import { getTestDatabase, cleanupDatabase, closeTestDatabase, shouldRunDbTests } from '@/test/utils/db';
 import { mockAdminSession, mockStaffSession } from '@/test/utils/auth';
 import { factories, createBulk } from '@/test/factories';
 import { tables as billiardTables, tableSessions, fnbOrders, fnbItems, fnbCategories, fnbOrderItems, payments, staff } from '@/schema';
@@ -16,7 +16,9 @@ jest.mock('@/lib/auth', () => ({
 
 const { auth } = require('@/lib/auth');
 
-describe('/api/analytics/revenue', () => {
+const describeDb = shouldRunDbTests() ? describe : describe.skip;
+
+describeDb('/api/analytics/revenue', () => {
   let db: any;
   let testTable: any;
   let testMenuItem: any;

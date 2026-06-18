@@ -5,6 +5,7 @@ import { tableSessions, tables } from '@/schema/tables';
 import { fnbOrders, fnbOrderItems, fnbItems, fnbCategories, staff } from '@/schema/fnb';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { isPaymentMethodId } from '@/lib/payment-methods';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -126,8 +127,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const validStatuses = ['pending', 'success', 'failed', 'cancelled'];
     if (!validStatuses.includes(newStatus)) {
-      return NextResponse.json({ 
-        error: 'Invalid status. Must be one of: pending, success, failed, cancelled' 
+      return NextResponse.json({
+        error: 'Invalid status. Must be one of: pending, success, failed, cancelled'
       }, { status: 400 });
     }
 
@@ -141,7 +142,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (paymentMethod) {
+      if (!isPaymentMethodId(paymentMethod)) {
+        return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 });
+      }
+
+      const existingPayment = await db
+        .select({
+          totalAmount: payments.totalAmount,
+          amount: payments.amount,
+        })
+        .from(payments)
+        .where(eq(payments.id, paymentId))
+        .limit(1);
+
+      const paymentAmount = existingPayment[0]?.totalAmount || existingPayment[0]?.amount || '0';
       updateData.paymentMethod = paymentMethod;
+      updateData.paymentMethods = JSON.stringify([{ type: paymentMethod, amount: paymentAmount }]);
     }
 
     // Update the payment
@@ -157,16 +173,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // If payment is marked as successful, update all related F&B orders to 'paid' status
     if (newStatus === 'success') {
       await db.update(fnbOrders)
-        .set({ 
+        .set({
           status: 'paid',
         })
         .where(eq(fnbOrders.paymentId, paymentId));
     }
-    
+
     // If payment is cancelled or failed, update F&B orders back to 'billed' status
     else if (newStatus === 'cancelled' || newStatus === 'failed') {
       await db.update(fnbOrders)
-        .set({ 
+        .set({
           status: 'billed',
         })
         .where(eq(fnbOrders.paymentId, paymentId));
@@ -179,4 +195,4 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     console.error('Error updating payment:', error);
     return NextResponse.json({ error: 'Failed to update payment' }, { status: 500 });
   }
-} 
+}

@@ -100,7 +100,7 @@ export async function createDatabaseBackup(version: string): Promise<string | nu
   try {
     const backupDir = './backups';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFile = path.join(backupDir, `chalkboard-backup-v${version}-${timestamp}.sql`);
+    const backupFile = path.join(backupDir, `nova-billiard-pos-backup-v${version}-${timestamp}.sql`);
     
     // Ensure backup directory exists
     if (!fs.existsSync(backupDir)) {

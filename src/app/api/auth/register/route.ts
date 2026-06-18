@@ -3,6 +3,8 @@ import { db, dbReady } from '@/lib/db';
 import { users } from '@/schema/auth';
 import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { auth } from '@/lib/auth';
+import { isProductionLike } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +43,17 @@ export async function POST(req: NextRequest) {
     // First user gets admin role, subsequent users get staff
     const userCount = await db.select({ count: sql<number>`count(*)` }).from(users);
     const isFirstUser = Number(userCount[0]?.count ?? 0) === 0;
+
+    if (!isFirstUser) {
+      if (isProductionLike() && process.env.ALLOW_PUBLIC_REGISTER !== 'true') {
+        return NextResponse.json({ error: 'Registration is disabled' }, { status: 403 });
+      }
+
+      const session = await auth();
+      if (!session || session.user?.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 

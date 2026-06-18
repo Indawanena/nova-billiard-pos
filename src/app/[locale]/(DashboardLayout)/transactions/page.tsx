@@ -15,6 +15,13 @@ import {
 } from "@tabler/icons-react";
 import DefaultSpinner from "@/components/ui-components/Spinner/DefaultSpinner";
 import { printHtml } from "@/lib/print-html";
+import { getPaymentMethodLabel } from "@/lib/payment-methods";
+
+type PaymentMethodOption = {
+  id: string;
+  label: string;
+  enabled: boolean;
+};
 
 interface TableSession {
   id: number;
@@ -113,6 +120,8 @@ const TransactionsPage = () => {
     store_phone: '',
     store_notes: ''
   });
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<PaymentMethodOption[]>([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -148,6 +157,7 @@ const TransactionsPage = () => {
       fetchPayments();
       fetchTaxSettings();
       fetchStoreSettings();
+      fetchPaymentMethodSettings();
     }
   }, [session]);
 
@@ -178,6 +188,24 @@ const TransactionsPage = () => {
       }
     } catch (error) {
       console.error('Failed to fetch store settings:', error);
+    }
+  };
+
+  const fetchPaymentMethodSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/payment-methods');
+      if (response.ok) {
+        const data = await response.json();
+        const methods = (data.methods || []).filter((method: PaymentMethodOption) => method.enabled);
+        setPaymentMethodOptions(methods);
+        setSelectedPaymentMethod((current) =>
+          methods.some((method: PaymentMethodOption) => method.id === current)
+            ? current
+            : methods[0]?.id || 'cash'
+        );
+      }
+    } catch (error) {
+      console.error('Failed to fetch payment method settings:', error);
     }
   };
 
@@ -267,7 +295,7 @@ const TransactionsPage = () => {
       const response = await fetch(`/api/payments/${paymentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'success' }),
+        body: JSON.stringify({ status: 'success', paymentMethod: selectedPaymentMethod }),
       });
 
       if (response.ok) {
@@ -309,15 +337,25 @@ const TransactionsPage = () => {
       const payment = payments.find(p => p.id === parseInt(paymentId));
       if (payment) {
         setSelectedPayment(payment);
+        setSelectedPaymentMethod(
+          payment.paymentMethod && paymentMethodOptions.some((method) => method.id === payment.paymentMethod)
+            ? payment.paymentMethod
+            : paymentMethodOptions[0]?.id || 'cash'
+        );
         setShowPaymentModal(true);
         // Clean up the URL param
         router.replace(window.location.pathname, { scroll: false });
       }
     }
-  }, [payments, searchParams]);
+  }, [payments, searchParams, paymentMethodOptions]);
 
   const openPaymentModal = (payment: Payment) => {
     setSelectedPayment(payment);
+    setSelectedPaymentMethod(
+      payment.paymentMethod && paymentMethodOptions.some((method) => method.id === payment.paymentMethod)
+        ? payment.paymentMethod
+        : paymentMethodOptions[0]?.id || 'cash'
+    );
     setShowPaymentModal(true);
   };
 
@@ -346,7 +384,7 @@ const TransactionsPage = () => {
       (locale === 'id' ? 'Pajak' : 'Tax');
     
     // Create a temporary translations object for the selected locale
-    const storeName = storeSettings.store_name || (locale === 'id' ? 'BILLIARD CHALKBOARD' : 'CHALKBOARD BILLIARD');
+    const storeName = storeSettings.store_name || 'NOVA BILLIARD POS';
     const receiptTranslations = locale === 'id' ? {
       title: storeName.toUpperCase(),
       subtitle: 'Struk Pembayaran',
@@ -368,7 +406,7 @@ const TransactionsPage = () => {
       total: 'TOTAL',
       walkInCustomer: 'Pelanggan Walk-in',
       thankYou: 'Terima kasih atas kunjungan Anda!',
-      businessName: storeSettings.store_name || 'Billiard Hall ChalkBoard',
+      businessName: storeSettings.store_name || 'Nova Billiard POS',
       generated: 'Dicetak',
       pending: 'TERTUNDA',
       success: 'BERHASIL',
@@ -395,7 +433,7 @@ const TransactionsPage = () => {
       total: 'TOTAL',
       walkInCustomer: 'Walk-in Customer',
       thankYou: 'Thank you for visiting!',
-      businessName: storeSettings.store_name || 'ChalkBoard Billiard Hall',
+      businessName: storeSettings.store_name || 'Nova Billiard POS',
       generated: 'Generated',
       pending: 'PENDING',
       success: 'SUCCESS',
@@ -813,7 +851,7 @@ const TransactionsPage = () => {
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm">
-                      {payment.paymentMethod || t('Transactions.table.notSpecified')}
+                      {payment.paymentMethod ? getPaymentMethodLabel(payment.paymentMethod) : t('Transactions.table.notSpecified')}
                     </div>
                   </Table.Cell>
                   <Table.Cell>
@@ -1041,6 +1079,26 @@ const TransactionsPage = () => {
                     {formatCurrency(selectedPayment.totalAmount)}
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="paymentMethod">{t('Transactions.processPayment.paymentMethod')}</Label>
+                <Select
+                  id="paymentMethod"
+                  value={selectedPaymentMethod}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  required
+                >
+                  {paymentMethodOptions.length > 0 ? (
+                    paymentMethodOptions.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="cash">Cash</option>
+                  )}
+                </Select>
               </div>
 
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
@@ -1289,7 +1347,7 @@ const TransactionsPage = () => {
                     {t('Transactions.transactionDetail.paymentMethod')}
                   </label>
                   <p className="mt-1 text-gray-900 dark:text-white">
-                    {selectedPayment.paymentMethod || t('Transactions.table.notSpecified')}
+                    {selectedPayment.paymentMethod ? getPaymentMethodLabel(selectedPayment.paymentMethod) : t('Transactions.table.notSpecified')}
                   </p>
                 </div>
                 <div>

@@ -2,7 +2,7 @@
 set -e
 
 echo "============================================"
-echo "  Chalkboard Docker Entrypoint"
+echo "  Nova Billiard POS Docker Entrypoint"
 echo "============================================"
 
 # Function to wait for database
@@ -84,7 +84,7 @@ run_db_setup
 
 echo ""
 echo "============================================"
-echo "  Starting Chalkboard Application"
+echo "  Starting Nova Billiard POS Application"
 echo "============================================"
 echo ""
 

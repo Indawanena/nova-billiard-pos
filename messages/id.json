@@ -71,7 +71,7 @@
     "hourly": "Per-jam"
   },
   "Dashboard": {
-    "title": "Dasbor ChalkBoard",
+    "title": "Dasbor Nova Billiard POS",
     "subtitle": "Selamat datang kembali, {name}",
     "loading": "Memuat dasbor...",
     "redirecting": "Mengalihkan ke halaman masuk...",
@@ -196,6 +196,7 @@
       "noPendingTransactions": "Tidak ada transaksi tertunda. Buat pesanan mandiri terlebih dahulu untuk menghasilkan transaksi tertunda.",
       "staffMember": "Anggota Staf *",
       "selectStaff": "Pilih anggota staf",
+      "paymentMethod": "Metode Pembayaran *",
       "notes": "Catatan",
       "notesPlaceholder": "Instruksi khusus atau preferensi pelanggan...",
       "orderSummary": "Ringkasan Pesanan",
@@ -475,6 +476,7 @@
       "discountAmount": "Jumlah Diskon",
       "taxAmount": "Jumlah Pajak",
       "totalAmount": "Jumlah Total",
+      "paymentMethod": "Metode Pembayaran",
       "staffConfirmation": "Konfirmasi Staf: Silakan verifikasi dengan pelanggan bahwa ini sesuai dengan pesanan mereka sebelum memproses pembayaran.",
       "confirmPaid": "Selesaikan Pembayaran",
       "cancelPayment": "Batalkan",
@@ -507,7 +509,7 @@
       "printInEnglish": "Cetak dalam Bahasa Inggris",
       "printInIndonesian": "Cetak dalam Bahasa Indonesia",
       "receipt": {
-        "title": "BILLIARD CHALKBOARD",
+        "title": "NOVA BILLIARD POS",
         "subtitle": "Struk Pembayaran",
         "transaction": "Transaksi",
         "date": "Tanggal",
@@ -527,7 +529,7 @@
         "total": "TOTAL",
         "footer": {
           "thankYou": "Terima kasih atas kunjungan Anda!",
-          "businessName": "Billiard Hall ChalkBoard",
+          "businessName": "Nova Billiard POS",
           "generated": "Dicetak"
         }
       }
@@ -912,6 +914,9 @@
     "hourlyRate": "Tarif Per Jam",
     "perMinuteRate": "Tarif Per Menit",
     "billableHours": "Jam Tagihan",
+    "plannedDuration": "Durasi Rencana",
+    "addPlayTime": "Tambah Jam Main",
+    "addTime": "Tambah",
     "durationAndBillingType": "Durasi & Jenis Penagihan",
     "durationMinutes": "Durasi (menit)",
     "failedToRecalculateBilling": "Gagal menghitung ulang tagihan",
@@ -972,7 +977,7 @@
       "title": "Informasi Toko",
       "subtitle": "Konfigurasi detail billiard hall untuk struk",
       "storeName": "Nama Toko",
-      "storeNamePlaceholder": "contoh: Chalkboard Billiard",
+      "storeNamePlaceholder": "contoh: Nova Billiard POS",
       "storeAddress": "Alamat",
       "storeAddressPlaceholder": "contoh: Jl. Sudirman No. 123",
       "storePhone": "Nomor Telepon",
@@ -989,6 +994,30 @@
       "noDefault": "Tidak ada default (pilih manual)",
       "saving": "Menyimpan...",
       "saveDefaultStaff": "Simpan Staff Default"
+    },
+    "paymentMethods": {
+      "title": "Metode Pembayaran",
+      "subtitle": "Pilih metode yang dapat digunakan kasir saat menyelesaikan transaksi.",
+      "saving": "Menyimpan...",
+      "savePaymentMethods": "Simpan Metode Pembayaran",
+      "saveSuccess": "Metode pembayaran berhasil disimpan",
+      "saveError": "Gagal menyimpan metode pembayaran",
+      "atLeastOne": "Minimal satu metode pembayaran harus aktif"
+    },
+    "printerSettings": {
+      "title": "Printer Struk",
+      "subtitle": "Atur printer thermal, termasuk printer LAN berbasis IP.",
+      "connectionType": "Tipe Koneksi",
+      "browserPrint": "Browser Print",
+      "desktopPrinter": "Printer Desktop",
+      "lanPrinter": "Printer LAN",
+      "printerName": "Nama Printer",
+      "lanHost": "IP Printer LAN",
+      "lanPort": "Port",
+      "saving": "Menyimpan...",
+      "savePrinterSettings": "Simpan Printer",
+      "saveSuccess": "Pengaturan printer berhasil disimpan",
+      "saveError": "Gagal menyimpan pengaturan printer"
     },
     "checkout": {
       "printAndSave": "Cetak & Simpan",
@@ -1015,6 +1044,7 @@
       "name": "Nama Paket",
       "category": "Kategori",
       "rate": "Tarif",
+      "includedFnb": "F&B Termasuk",
       "status": "Status",
       "default": "Default",
       "actions": "Aksi"
@@ -1030,6 +1060,9 @@
       "selectCategory": "Pilih kategori",
       "hourlyRate": "Tarif per Jam",
       "perMinuteRate": "Tarif per Menit",
+      "includedFnb": "F&B gratis dalam paket",
+      "includedFnbHint": "Item ini otomatis masuk bill dengan harga Rp0 saat sesi dimulai.",
+      "addIncludedItem": "Tambah Item",
       "isDefault": "Jadikan default untuk kategori ini",
       "isActive": "Aktif",
       "sortOrder": "Urutan",

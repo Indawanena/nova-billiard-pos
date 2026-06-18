@@ -8,7 +8,9 @@ interface DurationManagementProps {
   sessionId: number;
   currentDurationType: 'hourly' | 'per_minute';
   elapsedMinutes: number;
+  plannedDuration?: number;
   onDurationUpdate: (newDuration: number) => void;
+  onAddTime?: (minutes: number) => void;
   isUpdating?: boolean;
 }
 
@@ -16,12 +18,15 @@ const DurationManagement: React.FC<DurationManagementProps> = ({
   sessionId,
   currentDurationType,
   elapsedMinutes,
+  plannedDuration = 0,
   onDurationUpdate,
+  onAddTime,
   isUpdating = false
 }) => {
   const tCommon = useTranslations('Common');
   const [isEditing, setIsEditing] = useState(false);
   const [editDuration, setEditDuration] = useState(elapsedMinutes);
+  const [customAddMinutes, setCustomAddMinutes] = useState(60);
 
   const formatTime = (totalMinutes: number) => {
     if (currentDurationType === 'hourly') {
@@ -71,6 +76,12 @@ const DurationManagement: React.FC<DurationManagementProps> = ({
 
       {/* Billing Information */}
       <div className="text-xs text-bodytext pt-2 border-t">
+        {plannedDuration > 0 && (
+          <div className="flex justify-between">
+            <span>{tCommon('plannedDuration')}:</span>
+            <span className="font-medium">{plannedDuration} {tCommon('minutes')}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span>{tCommon('billingType')}:</span>
           <span className="font-medium">
@@ -86,6 +97,45 @@ const DurationManagement: React.FC<DurationManagementProps> = ({
           </div>
         )}
       </div>
+
+      {onAddTime && (
+        <div className="space-y-3 border-t pt-3">
+          <div className="text-sm font-medium text-dark dark:text-white">
+            {tCommon('addPlayTime')}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[30, 60, 120].map((minutes) => (
+              <Button
+                key={minutes}
+                type="button"
+                size="xs"
+                color="light"
+                disabled={isUpdating}
+                onClick={() => onAddTime(minutes)}
+              >
+                +{minutes} {tCommon('min')}
+              </Button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={customAddMinutes}
+              onChange={(e) => setCustomAddMinutes(parseInt(e.target.value, 10) || 0)}
+              className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:border-primary"
+              min="1"
+            />
+            <Button
+              type="button"
+              size="xs"
+              disabled={isUpdating || customAddMinutes <= 0}
+              onClick={() => onAddTime(customAddMinutes)}
+            >
+              {tCommon('addTime')}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

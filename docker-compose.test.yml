@@ -4,9 +4,9 @@ services:
     environment:
       POSTGRES_PASSWORD: testpass
       POSTGRES_USER: testuser
-      POSTGRES_DB: chalkboard_test
+      POSTGRES_DB: nova_billiard_pos_test
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +26,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://testuser:testpass@postgres:5432/chalkboard_test
+      - DATABASE_URL=postgresql://testuser:testpass@postgres:5432/nova_billiard_pos_test
       - NEXTAUTH_SECRET=test-secret-key
       - NEXTAUTH_URL=http://localhost:3000
       - DEPLOYMENT_MODE=node

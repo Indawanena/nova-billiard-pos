@@ -11,7 +11,7 @@ import { Manrope } from "next/font/google";
 const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Chalkboard.id - Dashboard",
+  title: "Nova Billiard POS - Dashboard",
 };
 
 export default async function RootLayout({
@@ -39,4 +39,4 @@ export default async function RootLayout({
       </body>
     </html>
   );
-} 
+}

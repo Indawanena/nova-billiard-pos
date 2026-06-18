@@ -35,7 +35,7 @@ interface TableSession {
   status: string;
 }
 
-const ChalkBoardDashboard = () => {
+const NovaBilliardDashboard = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const t = useTranslations('Dashboard');
@@ -92,21 +92,26 @@ const ChalkBoardDashboard = () => {
   // Fetch tables data
   const fetchTables = async () => {
     try {
-      const response = await fetch('/api/tables');
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch tables and all active sessions in parallel (avoids N+1 per-table requests)
+      const [tablesRes, sessionsRes] = await Promise.all([
+        fetch('/api/tables'),
+        fetch('/api/table-sessions/active'),
+      ]);
+
+      if (tablesRes.ok) {
+        const data = await tablesRes.json();
         const sortedTables = data.sort((a: Table, b: Table) => {
           const numA = parseInt((a.name.match(/(\d+)/) || ['0', '0'])[1], 10);
           const numB = parseInt((b.name.match(/(\d+)/) || ['0', '0'])[1], 10);
           return numA - numB || a.name.localeCompare(b.name);
         });
         setTables(sortedTables);
-        
+
         // Calculate stats
         const totalTables = data.length;
         const occupiedTables = data.filter((table: Table) => table.status === 'occupied').length;
         const availableTables = data.filter((table: Table) => table.status === 'available').length;
-        
+
         setStats({
           totalTables,
           occupiedTables,
@@ -114,21 +119,15 @@ const ChalkBoardDashboard = () => {
           totalRevenue: 0, // Will be calculated from sessions
         });
 
-        // Fetch current sessions for occupied tables
-        data.forEach(async (table: Table) => {
-          if (table.status === 'occupied') {
-            const sessionResponse = await fetch(`/api/tables/${table.id}/current-session`);
-            if (sessionResponse.ok) {
-              const sessionData = await sessionResponse.json();
-              if (sessionData.session) {
-                setSessions(prev => ({
-                  ...prev,
-                  [table.id]: sessionData.session
-                }));
-              }
-            }
+        // Map all active sessions in one shot
+        if (sessionsRes.ok) {
+          const activeSessions = await sessionsRes.json();
+          const sessionMap: { [key: number]: TableSession } = {};
+          for (const s of activeSessions) {
+            sessionMap[s.tableId] = s;
           }
-        });
+          setSessions(sessionMap);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error);
@@ -337,16 +336,10 @@ const ChalkBoardDashboard = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/pos">
-            <Button color="secondary" size="sm">
+          <Link href="/pos-terminal">
+            <Button color="primary" size="sm">
               <IconCoffee className="w-4 h-4 mr-2" />
               {t('buttons.posSystem')}
-            </Button>
-          </Link>
-          <Link href="/tables">
-            <Button color="primary" size="sm">
-              <IconPlus className="w-4 h-4 mr-2" />
-              {t('buttons.addTable')}
             </Button>
           </Link>
         </div>
@@ -484,7 +477,7 @@ const ChalkBoardDashboard = () => {
         {tables.length === 0 && (
           <div className="text-center py-12">
             <p className="text-bodytext mb-4">{t('noTables')}</p>
-            <Link href="/tables">
+            <Link href="/pos-terminal">
               <Button color="primary">
                 <IconPlus className="w-4 h-4 mr-2" />
                 {t('createFirstTable')}
@@ -666,4 +659,4 @@ const ChalkBoardDashboard = () => {
   );
 };
 
-export default ChalkBoardDashboard; 
+export default NovaBilliardDashboard;

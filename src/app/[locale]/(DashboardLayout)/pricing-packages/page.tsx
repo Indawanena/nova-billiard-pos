@@ -193,6 +193,7 @@ export default function PricingPackagesPage() {
               <Table.HeadCell>{t('table.name')}</Table.HeadCell>
               <Table.HeadCell>{t('table.category')}</Table.HeadCell>
               <Table.HeadCell>{t('table.rate')}</Table.HeadCell>
+              <Table.HeadCell>{t('table.includedFnb')}</Table.HeadCell>
               <Table.HeadCell>{t('table.status')}</Table.HeadCell>
               <Table.HeadCell>{t('table.default')}</Table.HeadCell>
               <Table.HeadCell>{t('table.actions')}</Table.HeadCell>
@@ -221,6 +222,19 @@ export default function PricingPackagesPage() {
                       ? formatCurrency(Number(pkg.hourlyRate))
                       : formatCurrency(Number(pkg.perMinuteRate))
                     }
+                  </Table.Cell>
+                  <Table.Cell>
+                    {((pkg as any).includedItems || []).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {((pkg as any).includedItems || []).map((item: any) => (
+                          <Badge key={`${pkg.id}-${item.itemId}`} color="purple">
+                            {item.quantity}x {item.name || `Item #${item.itemId}`}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
                   </Table.Cell>
                   <Table.Cell>
                     <Badge color={pkg.isActive ? "success" : "gray"}>

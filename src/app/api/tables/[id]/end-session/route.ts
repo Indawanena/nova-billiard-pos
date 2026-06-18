@@ -4,6 +4,7 @@ import { tables, tableSessions } from '@/schema/tables';
 import { pricingPackages } from '@/schema/pricing-packages';
 import { fnbOrders, fnbOrderItems, fnbItems } from '@/schema/fnb';
 import { eq, and } from 'drizzle-orm';
+import { requireActiveStatus } from '@/lib/transaction-safety';
 import { auth } from '@/lib/auth';
 import { getTaxSettings } from '@/lib/tax-server';
 import { calculateTax } from '@/lib/tax';
@@ -152,22 +153,34 @@ export async function POST(
     // Total cost including tax
     const totalCost = subtotal + totalTaxAmount;
 
-    // End the session (mark as completed)
-    const endedSession = await db.update(tableSessions)
-      .set({
-        endTime,
-        actualDuration,
-        originalDuration,
-        totalCost: totalCost.toFixed(2),
-        status: 'completed',
-      })
-      .where(eq(tableSessions.id, currentSession.id))
-      .returning();
+    const endedSession = await db.transaction(async (tx) => {
+      const [freshSession] = await tx.select({ id: tableSessions.id, status: tableSessions.status })
+        .from(tableSessions)
+        .where(eq(tableSessions.id, currentSession.id))
+        .limit(1);
 
-    // Update table status to available
-    await db.update(tables)
-      .set({ status: 'available', updatedAt: new Date() })
-      .where(eq(tables.id, tableId));
+      if (!freshSession) throw new Error('Session not found');
+      requireActiveStatus(freshSession, 'active', 'Session');
+
+      const updatedSession = await tx.update(tableSessions)
+        .set({
+          endTime,
+          actualDuration,
+          originalDuration,
+          totalCost: totalCost.toFixed(2),
+          status: 'completed',
+        })
+        .where(and(eq(tableSessions.id, currentSession.id), eq(tableSessions.status, 'active')))
+        .returning();
+
+      if (updatedSession.length === 0) throw new Error('Session is not active');
+
+      await tx.update(tables)
+        .set({ status: 'available', updatedAt: new Date() })
+        .where(eq(tables.id, tableId));
+
+      return updatedSession;
+    });
 
     // Return billing preview data (payment is NOT created yet — deferred to checkout confirmation)
     return NextResponse.json({
@@ -194,6 +207,13 @@ export async function POST(
       }
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to end session';
+    if (message.includes('not active')) {
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+    if (message.includes('not found')) {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Failed to end session' }, { status: 500 });
   }
 }

@@ -4,8 +4,14 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
 import { Alert, Card, Button, Label, TextInput, Checkbox, Select, Textarea } from "flowbite-react";
-import { IconSettings, IconCheck, IconX, IconPercentage, IconBuilding, IconUser } from "@tabler/icons-react";
+import { IconSettings, IconPercentage, IconBuilding, IconUser, IconPrinter, IconCreditCard } from "@tabler/icons-react";
 import DefaultSpinner from "@/components/ui-components/Spinner/DefaultSpinner";
+
+type PaymentMethodSetting = {
+  id: string;
+  label: string;
+  enabled: boolean;
+};
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -31,6 +37,15 @@ export default function AdminPage() {
   const [staffList, setStaffList] = useState<{ id: number; name: string; role: string }[]>([]);
   const [defaultStaffId, setDefaultStaffId] = useState('');
   const [staffLoading, setStaffLoading] = useState(false);
+  const [printerSettings, setPrinterSettings] = useState({
+    printer_connection_type: 'browser',
+    printer_name: 'POS-80',
+    printer_lan_host: '',
+    printer_lan_port: '9100',
+  });
+  const [printerLoading, setPrinterLoading] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -41,6 +56,7 @@ export default function AdminPage() {
     fetchTaxSettings();
     fetchStoreSettings();
     fetchStaffData();
+    fetchPaymentMethodSettings();
   }, [session, status, router]);
 
   const fetchTaxSettings = async () => {
@@ -68,6 +84,19 @@ export default function AdminPage() {
           store_notes: s.store_notes || ''
         });
         setDefaultStaffId(s.default_staff_id || '');
+        const nextPrinterSettings = {
+          printer_connection_type: s.printer_connection_type || 'browser',
+          printer_name: s.printer_name || 'POS-80',
+          printer_lan_host: s.printer_lan_host || '',
+          printer_lan_port: s.printer_lan_port || '9100',
+        };
+        setPrinterSettings(nextPrinterSettings);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('nova_billiard_pos_printer_connection', nextPrinterSettings.printer_connection_type);
+          window.localStorage.setItem('nova_billiard_pos_thermal_printer', nextPrinterSettings.printer_name || 'POS-80');
+          window.localStorage.setItem('nova_billiard_pos_printer_lan_host', nextPrinterSettings.printer_lan_host);
+          window.localStorage.setItem('nova_billiard_pos_printer_lan_port', nextPrinterSettings.printer_lan_port || '9100');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch store settings:', error);
@@ -84,6 +113,31 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Failed to fetch staff:', error);
     }
+  };
+
+  const fetchPaymentMethodSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/payment-methods');
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentMethods(data.methods || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch payment method settings:', error);
+    }
+  };
+
+  const handlePaymentMethodToggle = (methodId: string, enabled: boolean) => {
+    if (!enabled && paymentMethods.filter((method) => method.enabled).length <= 1) {
+      setAlert({ type: 'error', message: t('paymentMethods.atLeastOne') });
+      return;
+    }
+
+    setPaymentMethods((methods) =>
+      methods.map((method) =>
+        method.id === methodId ? { ...method, enabled } : method
+      )
+    );
   };
 
   const handleStoreSettingsSubmit = async (e: React.FormEvent) => {
@@ -120,6 +174,59 @@ export default function AdminPage() {
       setAlert({ type: 'error', message: 'Failed to save default staff' });
     } finally {
       setStaffLoading(false);
+    }
+  };
+
+  const handlePrinterSettingsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPrinterLoading(true);
+    try {
+      const entries = Object.entries(printerSettings);
+      for (const [key, value] of entries) {
+        await fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: value || ' ', description: `Printer ${key}` }),
+        });
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('nova_billiard_pos_printer_connection', printerSettings.printer_connection_type);
+        window.localStorage.setItem('nova_billiard_pos_thermal_printer', printerSettings.printer_name || 'POS-80');
+        window.localStorage.setItem('nova_billiard_pos_printer_lan_host', printerSettings.printer_lan_host);
+        window.localStorage.setItem('nova_billiard_pos_printer_lan_port', printerSettings.printer_lan_port || '9100');
+      }
+
+      setAlert({ type: 'success', message: t('printerSettings.saveSuccess') });
+    } catch (error) {
+      setAlert({ type: 'error', message: t('printerSettings.saveError') });
+    } finally {
+      setPrinterLoading(false);
+    }
+  };
+
+  const handlePaymentMethodsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPaymentMethodsLoading(true);
+    try {
+      const response = await fetch('/api/settings/payment-methods', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ methods: paymentMethods }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentMethods(data.methods || []);
+        setAlert({ type: 'success', message: t('paymentMethods.saveSuccess') });
+      } else {
+        const error = await response.json();
+        setAlert({ type: 'error', message: error.error || t('paymentMethods.saveError') });
+      }
+    } catch (error) {
+      setAlert({ type: 'error', message: t('paymentMethods.saveError') });
+    } finally {
+      setPaymentMethodsLoading(false);
     }
   };
 
@@ -365,6 +472,114 @@ export default function AdminPage() {
               <div className="flex justify-end">
                 <Button type="submit" disabled={staffLoading}>
                   {staffLoading ? t('defaultStaff.saving') : t('defaultStaff.saveDefaultStaff')}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Card>
+
+        {/* Payment Methods Card */}
+        <Card>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-semibold text-dark dark:text-white mb-2 flex items-center gap-2">
+                <IconCreditCard className="h-5 w-5" />
+                {t('paymentMethods.title')}
+              </h3>
+              <p className="text-bodytext text-sm mb-4">
+                {t('paymentMethods.subtitle')}
+              </p>
+            </div>
+
+            <form onSubmit={handlePaymentMethodsSubmit} className="space-y-4">
+              <div className="space-y-3">
+                {paymentMethods.map((method) => (
+                  <div key={method.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`paymentMethod-${method.id}`}
+                      checked={method.enabled}
+                      onChange={(e) => handlePaymentMethodToggle(method.id, e.target.checked)}
+                    />
+                    <Label htmlFor={`paymentMethod-${method.id}`}>{method.label}</Label>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={paymentMethodsLoading || paymentMethods.length === 0}>
+                  {paymentMethodsLoading ? t('paymentMethods.saving') : t('paymentMethods.savePaymentMethods')}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Card>
+
+        {/* Printer Settings Card */}
+        <Card>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-semibold text-dark dark:text-white mb-2 flex items-center gap-2">
+                <IconPrinter className="h-5 w-5" />
+                {t('printerSettings.title')}
+              </h3>
+              <p className="text-bodytext text-sm mb-4">
+                {t('printerSettings.subtitle')}
+              </p>
+            </div>
+
+            <form onSubmit={handlePrinterSettingsSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="printerConnectionType">{t('printerSettings.connectionType')}</Label>
+                <Select
+                  id="printerConnectionType"
+                  value={printerSettings.printer_connection_type}
+                  onChange={(e) => setPrinterSettings({ ...printerSettings, printer_connection_type: e.target.value })}
+                >
+                  <option value="browser">{t('printerSettings.browserPrint')}</option>
+                  <option value="desktop">{t('printerSettings.desktopPrinter')}</option>
+                  <option value="lan">{t('printerSettings.lanPrinter')}</option>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="printerName">{t('printerSettings.printerName')}</Label>
+                <TextInput
+                  id="printerName"
+                  value={printerSettings.printer_name}
+                  onChange={(e) => setPrinterSettings({ ...printerSettings, printer_name: e.target.value })}
+                  placeholder="POS-80"
+                />
+              </div>
+
+              {printerSettings.printer_connection_type === 'lan' && (
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3">
+                  <div>
+                    <Label htmlFor="printerLanHost">{t('printerSettings.lanHost')}</Label>
+                    <TextInput
+                      id="printerLanHost"
+                      value={printerSettings.printer_lan_host}
+                      onChange={(e) => setPrinterSettings({ ...printerSettings, printer_lan_host: e.target.value })}
+                      placeholder="192.168.1.50"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="printerLanPort">{t('printerSettings.lanPort')}</Label>
+                    <TextInput
+                      id="printerLanPort"
+                      type="number"
+                      min="1"
+                      max="65535"
+                      value={printerSettings.printer_lan_port}
+                      onChange={(e) => setPrinterSettings({ ...printerSettings, printer_lan_port: e.target.value })}
+                      placeholder="9100"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={printerLoading}>
+                  {printerLoading ? t('printerSettings.saving') : t('printerSettings.savePrinterSettings')}
                 </Button>
               </div>
             </form>

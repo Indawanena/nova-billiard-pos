@@ -5,6 +5,11 @@ import { pricingPackages } from "@/schema";
 import { tables } from "@/schema/tables";
 import { eq, count } from "drizzle-orm";
 import { z } from "zod";
+import {
+  attachIncludedItemsToPackages,
+  deletePackageIncludedItems,
+  savePackageIncludedItems,
+} from "@/lib/pricing-package-bundle-store";
 
 const updatePackageSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -14,6 +19,10 @@ const updatePackageSchema = z.object({
   isDefault: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.string().optional(),
+  includedItems: z.array(z.object({
+    itemId: z.number().int().positive(),
+    quantity: z.number().int().positive(),
+  })).optional(),
 });
 
 export async function GET(
@@ -40,7 +49,8 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(packageData);
+    const [packageWithIncludedItems] = await attachIncludedItemsToPackages([packageData]);
+    return NextResponse.json(packageWithIncludedItems);
   } catch (error) {
     console.error("Error fetching pricing package:", error);
     return NextResponse.json(
@@ -86,16 +96,22 @@ export async function PUT(
         .where(eq(pricingPackages.category, existing.category));
     }
 
+    const { includedItems, ...packageFields } = validatedData;
+
     const [updated] = await db
       .update(pricingPackages)
       .set({
-        ...validatedData,
+        ...packageFields,
         updatedAt: new Date(),
       })
       .where(eq(pricingPackages.id, id))
       .returning();
 
-    return NextResponse.json(updated);
+    const savedIncludedItems = includedItems !== undefined
+      ? await savePackageIncludedItems(id, includedItems)
+      : await attachIncludedItemsToPackages([updated]).then(([pkg]) => (pkg as any).includedItems || []);
+
+    return NextResponse.json({ ...updated, includedItems: savedIncludedItems });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -139,6 +155,8 @@ export async function DELETE(
     await db
       .delete(pricingPackages)
       .where(eq(pricingPackages.id, id));
+
+    await deletePackageIncludedItems(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

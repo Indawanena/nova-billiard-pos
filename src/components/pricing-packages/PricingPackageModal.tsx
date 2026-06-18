@@ -11,6 +11,19 @@ import {
   Checkbox 
 } from "flowbite-react";
 import { PricingPackage } from "@/schema";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
+
+interface FnbItemOption {
+  id: number;
+  name: string;
+  categoryName?: string;
+  unit?: string;
+}
+
+interface IncludedItemForm {
+  itemId: number;
+  quantity: number;
+}
 
 interface PricingPackageModalProps {
   open: boolean;
@@ -37,8 +50,19 @@ export default function PricingPackageModal({
     perMinuteRate: "",
     isDefault: false,
     isActive: true,
-    sortOrder: "0"
+    sortOrder: "0",
+    includedItems: [] as IncludedItemForm[]
   });
+  const [fnbItems, setFnbItems] = useState<FnbItemOption[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    fetch('/api/fnb/items')
+      .then((response) => response.ok ? response.json() : [])
+      .then((items) => setFnbItems(items))
+      .catch(() => setFnbItems([]));
+  }, [open]);
 
   useEffect(() => {
     if (initialPackage) {
@@ -50,7 +74,11 @@ export default function PricingPackageModal({
         perMinuteRate: initialPackage.perMinuteRate || "",
         isDefault: initialPackage.isDefault,
         isActive: initialPackage.isActive,
-        sortOrder: initialPackage.sortOrder || "0"
+        sortOrder: initialPackage.sortOrder || "0",
+        includedItems: ((initialPackage as any).includedItems || []).map((item: any) => ({
+          itemId: Number(item.itemId),
+          quantity: Number(item.quantity) || 1,
+        }))
       });
     } else {
       // Reset form for new package
@@ -62,10 +90,40 @@ export default function PricingPackageModal({
         perMinuteRate: "",
         isDefault: false,
         isActive: true,
-        sortOrder: "0"
+        sortOrder: "0",
+        includedItems: []
       });
     }
   }, [initialPackage]);
+
+  const updateIncludedItem = (index: number, item: Partial<IncludedItemForm>) => {
+    setFormData((current) => ({
+      ...current,
+      includedItems: current.includedItems.map((includedItem, includedIndex) => (
+        includedIndex === index ? { ...includedItem, ...item } : includedItem
+      )),
+    }));
+  };
+
+  const addIncludedItem = () => {
+    const firstItem = fnbItems[0];
+    if (!firstItem) return;
+
+    setFormData((current) => ({
+      ...current,
+      includedItems: [
+        ...current.includedItems,
+        { itemId: firstItem.id, quantity: 1 },
+      ],
+    }));
+  };
+
+  const removeIncludedItem = (index: number) => {
+    setFormData((current) => ({
+      ...current,
+      includedItems: current.includedItems.filter((_, includedIndex) => includedIndex !== index),
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +134,12 @@ export default function PricingPackageModal({
         ...formData,
         hourlyRate: formData.category === "hourly" ? formData.hourlyRate : undefined,
         perMinuteRate: formData.category === "per_minute" ? formData.perMinuteRate : undefined,
+        includedItems: formData.includedItems
+          .filter((item) => item.itemId && item.quantity > 0)
+          .map((item) => ({
+            itemId: Number(item.itemId),
+            quantity: Number(item.quantity),
+          })),
       };
 
       const url = initialPackage 
@@ -201,6 +265,61 @@ export default function PricingPackageModal({
               placeholder="0"
               disabled={loading}
             />
+          </div>
+
+          <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label value={t('includedFnb')} />
+                <p className="text-xs text-gray-500">{t('includedFnbHint')}</p>
+              </div>
+              <Button
+                type="button"
+                size="xs"
+                color="light"
+                onClick={addIncludedItem}
+                disabled={loading || fnbItems.length === 0}
+              >
+                <IconPlus className="mr-1 h-4 w-4" />
+                {t('addIncludedItem')}
+              </Button>
+            </div>
+
+            {formData.includedItems.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {formData.includedItems.map((includedItem, index) => (
+                  <div key={`${includedItem.itemId}-${index}`} className="grid grid-cols-[1fr_90px_36px] gap-2">
+                    <Select
+                      value={String(includedItem.itemId)}
+                      onChange={(e) => updateIncludedItem(index, { itemId: Number(e.target.value) })}
+                      disabled={loading}
+                    >
+                      {fnbItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}{item.categoryName ? ` - ${item.categoryName}` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                    <TextInput
+                      type="number"
+                      min="1"
+                      value={includedItem.quantity}
+                      onChange={(e) => updateIncludedItem(index, { quantity: parseInt(e.target.value, 10) || 1 })}
+                      disabled={loading}
+                    />
+                    <Button
+                      type="button"
+                      size="xs"
+                      color="failure"
+                      onClick={() => removeIncludedItem(index)}
+                      disabled={loading}
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

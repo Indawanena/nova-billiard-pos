@@ -4,7 +4,7 @@
 
 import { GET, POST } from './route';
 import { testApi, expectApiSuccess, expectApiError } from '@/test/utils/api';
-import { getTestDatabase, cleanupDatabase, closeTestDatabase } from '@/test/utils/db';
+import { getTestDatabase, cleanupDatabase, closeTestDatabase, shouldRunDbTests } from '@/test/utils/db';
 import { mockAdminSession, mockStaffSession } from '@/test/utils/auth';
 import { factories, createBulk } from '@/test/factories';
 import { tables as billiardTables, pricingPackages } from '@/schema';
@@ -16,14 +16,13 @@ jest.mock('@/lib/auth', () => ({
 
 const { auth } = require('@/lib/auth');
 
-describe('/api/tables', () => {
+const describeDb = shouldRunDbTests() ? describe : describe.skip;
+
+describeDb('/api/tables', () => {
   let db: any;
 
   beforeAll(async () => {
     db = await getTestDatabase();
-    if (!db) {
-      throw new Error('Failed to get test database connection');
-    }
   });
 
   beforeEach(async () => {

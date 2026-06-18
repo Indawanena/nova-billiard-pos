@@ -71,7 +71,7 @@
     "hourly": "Hourly"
   },
   "Dashboard": {
-    "title": "ChalkBoard Dashboard",
+    "title": "Nova Billiard POS Dashboard",
     "subtitle": "Welcome back, {name}",
     "loading": "Loading dashboard...",
     "redirecting": "Redirecting to sign in...",
@@ -196,6 +196,7 @@
       "noPendingTransactions": "No pending transactions available. Create a standalone order first to generate a pending transaction.",
       "staffMember": "Staff Member *",
       "selectStaff": "Select staff member",
+      "paymentMethod": "Payment Method *",
       "notes": "Notes",
       "notesPlaceholder": "Special instructions or customer preferences...",
       "orderSummary": "Order Summary",
@@ -475,6 +476,7 @@
       "discountAmount": "Discount Amount",
       "taxAmount": "Tax Amount",
       "totalAmount": "Total Amount",
+      "paymentMethod": "Payment Method",
       "staffConfirmation": "Staff Confirmation: Please verify with the customer that this matches their order before processing the payment.",
       "confirmPaid": "Confirm & Mark as Paid",
       "cancelPayment": "Cancel Payment",
@@ -507,7 +509,7 @@
       "printInEnglish": "Print in English",
       "printInIndonesian": "Print in Indonesian",
       "receipt": {
-        "title": "CHALKBOARD BILLIARD",
+        "title": "NOVA BILLIARD POS",
         "subtitle": "Receipt",
         "transaction": "Transaction",
         "date": "Date",
@@ -527,7 +529,7 @@
         "total": "TOTAL",
         "footer": {
           "thankYou": "Thank you for visiting!",
-          "businessName": "ChalkBoard Billiard Hall",
+          "businessName": "Nova Billiard POS",
           "generated": "Generated"
         }
       }
@@ -911,6 +913,9 @@
     "hourlyRate": "Hourly Rate",
     "perMinuteRate": "Per Minute Rate",
     "billableHours": "Billable Hours",
+    "plannedDuration": "Planned Duration",
+    "addPlayTime": "Add Play Time",
+    "addTime": "Add",
     "durationAndBillingType": "Duration & Billing Type",
     "durationMinutes": "Duration (minutes)",
     "failedToRecalculateBilling": "Failed to recalculate billing",
@@ -971,7 +976,7 @@
       "title": "Store Information",
       "subtitle": "Configure your billiard hall details for receipts",
       "storeName": "Store Name",
-      "storeNamePlaceholder": "e.g., Chalkboard Billiard",
+      "storeNamePlaceholder": "e.g., Nova Billiard POS",
       "storeAddress": "Address",
       "storeAddressPlaceholder": "e.g., Jl. Sudirman No. 123",
       "storePhone": "Phone Number",
@@ -988,6 +993,30 @@
       "noDefault": "No default (manual selection required)",
       "saving": "Saving...",
       "saveDefaultStaff": "Save Default Staff"
+    },
+    "paymentMethods": {
+      "title": "Payment Methods",
+      "subtitle": "Choose which methods cashiers can use when completing transactions.",
+      "saving": "Saving...",
+      "savePaymentMethods": "Save Payment Methods",
+      "saveSuccess": "Payment methods saved successfully",
+      "saveError": "Failed to save payment methods",
+      "atLeastOne": "At least one payment method must stay enabled"
+    },
+    "printerSettings": {
+      "title": "Receipt Printer",
+      "subtitle": "Configure thermal printers, including IP-based LAN printers.",
+      "connectionType": "Connection Type",
+      "browserPrint": "Browser Print",
+      "desktopPrinter": "Desktop Printer",
+      "lanPrinter": "LAN Printer",
+      "printerName": "Printer Name",
+      "lanHost": "LAN Printer IP",
+      "lanPort": "Port",
+      "saving": "Saving...",
+      "savePrinterSettings": "Save Printer",
+      "saveSuccess": "Printer settings saved successfully",
+      "saveError": "Failed to save printer settings"
     },
     "checkout": {
       "printAndSave": "Print & Save",
@@ -1014,6 +1043,7 @@
       "name": "Package Name",
       "category": "Category",
       "rate": "Rate",
+      "includedFnb": "Included F&B",
       "status": "Status",
       "default": "Default",
       "actions": "Actions"
@@ -1029,6 +1059,9 @@
       "selectCategory": "Select category",
       "hourlyRate": "Hourly Rate",
       "perMinuteRate": "Per Minute Rate",
+      "includedFnb": "Free F&B in package",
+      "includedFnbHint": "These items are added to the bill at Rp0 when a session starts.",
+      "addIncludedItem": "Add Item",
       "isDefault": "Set as default for this category",
       "isActive": "Active",
       "sortOrder": "Sort Order",

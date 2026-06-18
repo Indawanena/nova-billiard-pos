@@ -24,13 +24,23 @@ export default withAuth(
     // Remove locale from pathname for auth checks
     const pathWithoutLocale = isValidLocale ? pathname.replace(`/${locale}`, '') || '/' : pathname;
 
+    // Transaction screens must run from the POS Terminal only.
+    // Redirect the old dashboard transaction routes to the terminal.
+    const terminalOnlyRoutes = ["/tables", "/pos"];
+    const isTerminalOnly = terminalOnlyRoutes.some(
+      (r) => pathWithoutLocale === r || pathWithoutLocale.startsWith(`${r}/`)
+    );
+    if (isTerminalOnly) {
+      return NextResponse.redirect(new URL(`/${actualLocale}/pos-terminal`, req.url));
+    }
+
     // If user is authenticated and trying to access landing page, redirect to dashboard
     if (token && pathWithoutLocale === "/") {
       return NextResponse.redirect(new URL(`/${actualLocale}/dashboard`, req.url));
     }
 
-    // If user is not authenticated and trying to access protected routes, redirect to signin
-    if (!token && pathWithoutLocale.startsWith("/dashboard")) {
+    const protectedPrefixes = ["/dashboard", "/admin", "/analytics", "/fnb", "/pos", "/pos-terminal", "/pricing-packages", "/stock", "/tables", "/transactions", "/users", "/widgets"];
+    if (!token && protectedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
       return NextResponse.redirect(new URL(`/${actualLocale}/auth/signin`, req.url));
     }
 
@@ -61,8 +71,8 @@ export default withAuth(
           return true;
         }
         
-        // For dashboard routes, require authentication
-        if (pathWithoutLocale.startsWith("/dashboard")) {
+        const protectedPrefixes = ["/dashboard", "/admin", "/analytics", "/fnb", "/pos", "/pos-terminal", "/pricing-packages", "/stock", "/tables", "/transactions", "/users", "/widgets"];
+        if (protectedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
           return !!token;
         }
         

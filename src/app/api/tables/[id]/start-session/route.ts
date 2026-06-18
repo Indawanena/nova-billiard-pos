@@ -3,8 +3,10 @@ import { db } from '@/lib/db';
 import { tables, tableSessions } from '@/schema/tables';
 import { pricingPackages } from '@/schema/pricing-packages';
 import { systemSettings } from '@/schema/settings';
-import { eq, and } from 'drizzle-orm';
+import { fnbOrders, fnbOrderItems } from '@/schema/fnb';
+import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { getPackageIncludedItems } from '@/lib/pricing-package-bundle-store';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -82,8 +84,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .set({ status: 'occupied', updatedAt: new Date() })
       .where(eq(tables.id, tableId));
 
+    const includedItems = await getPackageIncludedItems(pricingPackageId);
+    if (includedItems.length > 0) {
+      const [includedOrder] = await db.insert(fnbOrders).values({
+        orderNumber: `PKG-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        tableId,
+        customerName,
+        subtotal: '0',
+        tax: '0',
+        total: '0',
+        status: 'pending',
+        staffId,
+        notes: `Included in package: ${pricingPackage[0].name}`,
+        createdAt: new Date(),
+      }).returning();
+
+      await db.insert(fnbOrderItems).values(
+        includedItems.map((item) => ({
+          orderId: includedOrder.id,
+          itemId: item.itemId,
+          quantity: item.quantity,
+          unitPrice: '0',
+          subtotal: '0',
+        }))
+      );
+
+      await db.update(tableSessions)
+        .set({ fnbOrderCount: sql`${tableSessions.fnbOrderCount} + 1` })
+        .where(eq(tableSessions.id, newSession[0].id));
+    }
+
     return NextResponse.json(newSession[0], { status: 201 });
   } catch (error) {
+    console.error('Failed to start session:', error);
     return NextResponse.json({ error: 'Failed to start session' }, { status: 500 });
   }
-} 
+}

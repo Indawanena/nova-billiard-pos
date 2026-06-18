@@ -1,4 +1,4 @@
-# 🎱 Chalkboard.id v1.0.3
+# 🎱 Nova Billiard POS v1.0.3
 
 A comprehensive billiard hall management system built with Next.js 15, React 19, and TypeScript. Manage table sessions, F&B orders, payments, staff, and analytics with ease.
 
@@ -8,7 +8,7 @@ A comprehensive billiard hall management system built with Next.js 15, React 19,
 
 One-click deploy to Railway with automatic PostgreSQL database:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/chalkboardid?referralCode=D8ivdW&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
 ### Docker (Recommended for Self-Hosting)
 
@@ -16,13 +16,13 @@ Run with Docker using our official images:
 
 ```bash
 # Quick start
-docker run -p 3000:3000 kugieapp/chalkboard:latest
+docker run -p 3000:3000 indawanena/nova-billiard-pos:latest
 
 # Or use Docker Compose
 docker compose up
 ```
 
-[🐳 View on Docker Hub](https://hub.docker.com/r/kugieapp/chalkboard)
+[🐳 View on Docker Hub](https://hub.docker.com/r/indawanena/nova-billiard-pos)
 
 ### Desktop App (Recommended for Local)
 
@@ -39,11 +39,11 @@ Native desktop application powered by [Tauri v2](https://v2.tauri.app/) with an 
 2. Install and launch — the embedded PGlite database is set up automatically
 3. No external database or server configuration needed
 
-[📥 Download Desktop App](https://github.com/kugie-app/chalkboard.id/releases)
+[📥 Download Desktop App](https://github.com/indawanena/nova-billiard/releases)
 
 ## 🎯 Overview
 
-This modern web application offers a complete solution for billiard hall operators to manage their business efficiently. From table bookings and session tracking to F&B orders and comprehensive analytics, Chalkboard.id handles all aspects of billiard hall operations.
+This modern web application offers a complete solution for billiard hall operators to manage their business efficiently. From table bookings and session tracking to F&B orders and comprehensive analytics, Nova Billiard POS handles all aspects of billiard hall operations.
 
 ## 🏗️ Deployment Options
 
@@ -191,7 +191,7 @@ src/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd chalkboard
+   cd nova-billiard
    ```
 
 2. **Install dependencies**
@@ -207,6 +207,7 @@ src/
    NEXTAUTH_SECRET="your-nextauth-secret"
    NEXTAUTH_URL="http://localhost:3000"
    ```
+   Generate a unique `NEXTAUTH_SECRET` for every deployment. Do not configure reusable default admin credentials.
 
 4. **Set up the database**
    ```bash
@@ -226,6 +227,9 @@ src/
 
 6. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
+
+7. **Create the first admin account**
+   Open the sign-in page, switch to sign up, and register with an email and password you control. The first registered user is automatically assigned the `admin` role; later users are created as staff unless an admin changes their role.
 
 ### Database Commands
 - `bun run db:generate` - Generate database migrations
@@ -320,4 +324,4 @@ For support and questions, please contact the development team or create an issu
 
 ---
 
-**Chalkboard.id** - Streamlining billiard hall operations with modern technology. Built by [kugie.app](https://kugie.app) and the open source community
+**Nova Billiard POS** - Streamlining billiard hall operations with modern technology. Built by [kugie.app](https://kugie.app) and the open source community

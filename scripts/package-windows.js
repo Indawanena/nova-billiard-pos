@@ -11,7 +11,7 @@ const { execSync } = require('child_process');
 
 // Configuration
 const config = {
-  appName: 'Chalkboard.id',
+  appName: 'Nova Billiard POS',
   version: require('../package.json').version,
   buildDir: path.join(__dirname, '..', '.next', 'standalone'),
   outputDir: path.join(__dirname, '..', 'dist'),
@@ -56,7 +56,7 @@ function createStandalonePackage() {
   const packagePath = path.join(config.buildDir, 'package.json');
   
   const standalonePackage = {
-    name: 'chalkboard-standalone',
+    name: 'nova-billiard-pos-standalone',
     version: config.version,
     main: 'server.js',
     scripts: {
@@ -138,7 +138,7 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-console.log('🚀 Starting Chalkboard.id v${config.version}');
+console.log('🚀 Starting Nova Billiard POS v${config.version}');
 console.log('📁 Working directory:', __dirname);
 console.log('🌐 Mode: Standalone Windows');
 
@@ -146,14 +146,14 @@ console.log('🌐 Mode: Standalone Windows');
 require('./server.js');
 `.trim();
 
-  const startupPath = path.join(config.buildDir, 'chalkboard.js');
+  const startupPath = path.join(config.buildDir, 'nova-billiard-pos.js');
   fs.writeFileSync(startupPath, startupScript);
   
   // Update package.json to use our startup script
   const packagePath = path.join(config.buildDir, 'package.json');
   const packageData = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
-  packageData.main = 'chalkboard.js';
-  packageData.bin = 'chalkboard.js';
+  packageData.main = 'nova-billiard-pos.js';
+  packageData.bin = 'nova-billiard-pos.js';
   fs.writeFileSync(packagePath, JSON.stringify(packageData, null, 2));
   
   console.log('✅ Created startup script');
@@ -167,7 +167,7 @@ function createInstaller() {
 @echo off
 echo.
 echo ====================================
-echo   Chalkboard.id v${config.version}
+echo   Nova Billiard POS v${config.version}
 echo   Windows Standalone Installer
 echo ====================================
 echo.
@@ -175,7 +175,7 @@ echo.
 REM Check if PostgreSQL is installed
 where psql >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
-    echo ⚠️  PostgreSQL not found. Please install PostgreSQL 12+ before running Chalkboard.id
+    echo ⚠️  PostgreSQL not found. Please install PostgreSQL 12+ before running Nova Billiard POS
     echo    Download from: https://www.postgresql.org/download/windows/
     echo.
     pause
@@ -183,38 +183,41 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 REM Create installation directory
-if not exist "%PROGRAMFILES%\\Chalkboard" (
-    mkdir "%PROGRAMFILES%\\Chalkboard"
+if not exist "%PROGRAMFILES%\\Nova Billiard POS" (
+    mkdir "%PROGRAMFILES%\\Nova Billiard POS"
 )
 
 REM Copy executable
-copy "chalkboard-win.exe" "%PROGRAMFILES%\\Chalkboard\\chalkboard.exe"
+copy "nova-billiard-pos-win.exe" "%PROGRAMFILES%\\Nova Billiard POS\\nova-billiard-pos.exe"
 
 REM Create desktop shortcut
-set SHORTCUT="%USERPROFILE%\\Desktop\\Chalkboard.id.lnk"
+set SHORTCUT="%USERPROFILE%\\Desktop\\Nova Billiard POS.lnk"
 echo Set oWS = WScript.CreateObject("WScript.Shell") > CreateShortcut.vbs
 echo sLinkFile = %SHORTCUT% >> CreateShortcut.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> CreateShortcut.vbs
-echo oLink.TargetPath = "%PROGRAMFILES%\\Chalkboard\\chalkboard.exe" >> CreateShortcut.vbs
-echo oLink.WorkingDirectory = "%PROGRAMFILES%\\Chalkboard" >> CreateShortcut.vbs
-echo oLink.Description = "Chalkboard.id - Billiard Hall Management System" >> CreateShortcut.vbs
+echo oLink.TargetPath = "%PROGRAMFILES%\\Nova Billiard POS\\nova-billiard-pos.exe" >> CreateShortcut.vbs
+echo oLink.WorkingDirectory = "%PROGRAMFILES%\\Nova Billiard POS" >> CreateShortcut.vbs
+echo oLink.Description = "Nova Billiard POS - Billiard Hall Management System" >> CreateShortcut.vbs
 echo oLink.Save >> CreateShortcut.vbs
 cscript CreateShortcut.vbs
 del CreateShortcut.vbs
 
 REM Create example environment file
-echo # Chalkboard.id Configuration > "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # Copy this file to .env and configure your settings >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # Database Configuration >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo DATABASE_URL=postgresql://postgres:password@localhost:5432/chalkboard >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # Authentication >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo NEXTAUTH_SECRET=your-secret-here-minimum-32-characters >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo NEXTAUTH_URL=http://localhost:3000 >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo # Auto-update Server (optional) >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
-echo UPDATE_SERVER_URL=https://your-update-server.com/api/updates >> "%PROGRAMFILES%\\Chalkboard\\.env.example"
+echo # Nova Billiard POS Configuration > "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # Copy this file to .env and configure your settings >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # Database Configuration >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo DATABASE_URL=postgresql://postgres:password@localhost:5432/nova_billiard_pos >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # Authentication >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo NEXTAUTH_SECRET=your-secret-here-minimum-32-characters >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo NEXTAUTH_URL=http://localhost:3000 >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # First admin account >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # Start the app, open /id/auth/signin, and register the first user. >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # That first registered account becomes the admin. >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo # Auto-update Server (optional) >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
+echo UPDATE_SERVER_URL=https://your-update-server.com/api/updates >> "%PROGRAMFILES%\\Nova Billiard POS\\.env.example"
 
 echo.
 echo ✅ Installation completed successfully!
@@ -222,10 +225,10 @@ echo.
 echo 📋 Next steps:
 echo    1. Configure PostgreSQL database
 echo    2. Copy .env.example to .env and edit settings
-echo    3. Launch Chalkboard.id from desktop shortcut
+echo    3. Launch Nova Billiard POS from desktop shortcut
 echo.
 echo 📖 For detailed setup instructions, visit:
-echo    https://github.com/your-username/chalkboard/blob/main/docs/STANDALONE.md
+echo    https://github.com/indawanena/nova-billiard/blob/main/docs/STANDALONE.md
 echo.
 pause
 `.trim();
@@ -245,7 +248,7 @@ function buildExecutable() {
     'npx pkg',
     path.join(config.buildDir, 'package.json'),
     '--target node18-win-x64',
-    '--output', path.join(config.outputDir, 'chalkboard-win.exe'),
+    '--output', path.join(config.outputDir, 'nova-billiard-pos-win.exe'),
     '--compress GZip'
   ].join(' ');
 
@@ -271,8 +274,8 @@ function createReleasePackage() {
   }
 
   // Copy executable
-  const executablePath = path.join(config.outputDir, 'chalkboard-win.exe');
-  const releaseExecutable = path.join(releaseDir, 'chalkboard-win.exe');
+  const executablePath = path.join(config.outputDir, 'nova-billiard-pos-win.exe');
+  const releaseExecutable = path.join(releaseDir, 'nova-billiard-pos-win.exe');
   fs.copyFileSync(executablePath, releaseExecutable);
 
   // Copy installer
@@ -288,19 +291,19 @@ function createReleasePackage() {
 
   // Create README
   const readmeContent = `
-# Chalkboard.id v${config.version} - Windows Standalone
+# Nova Billiard POS v${config.version} - Windows Standalone
 
 ## Quick Start
 
-1. Run \`install.bat\` as Administrator to install Chalkboard.id
+1. Run \`install.bat\` as Administrator to install Nova Billiard POS
 2. Configure PostgreSQL database (see Database Setup below)
-3. Configure environment variables in \`C:\\Program Files\\Chalkboard\\.env\`
-4. Launch Chalkboard.id from desktop shortcut
+3. Configure environment variables in \`C:\\Program Files\\Nova Billiard POS\\.env\`
+4. Launch Nova Billiard POS from desktop shortcut
 
 ## Database Setup
 
 1. Install PostgreSQL 12+ from https://www.postgresql.org/download/windows/
-2. Create a database named \`chalkboard\`
+2. Create a database named \`nova_billiard_pos\`
 3. Update DATABASE_URL in .env file
 
 ## Configuration
@@ -310,10 +313,12 @@ Copy \`.env.example\` to \`.env\` and configure:
 - NEXTAUTH_SECRET: Random string for session encryption
 - UPDATE_SERVER_URL: Auto-update server (optional)
 
+Create the first admin account in the app after startup. The first registered user is promoted to admin; no default admin email or password is created.
+
 ## Support
 
 For help and documentation, visit:
-https://github.com/your-username/chalkboard/blob/main/docs/
+https://github.com/indawanena/nova-billiard/blob/main/docs/
 
 ## Version Information
 

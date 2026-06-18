@@ -4,14 +4,16 @@ import { tables, tableSessions } from '@/schema/tables';
 import { fnbOrders, fnbOrderItems, fnbItems, staff } from '@/schema/fnb';
 import { payments } from '@/schema/payments';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { requireAdmin, isProductionLike } from '@/lib/api-auth';
 
 export async function POST() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isProductionLike() && process.env.ALLOW_TEST_SEED !== 'true') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     console.log('🧪 Creating test transaction data...');
 

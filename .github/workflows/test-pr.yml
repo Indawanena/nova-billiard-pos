@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: kugieapp/chalkboard
+  IMAGE_NAME: indawanena/nova-billiard-pos
 
 jobs:
   test:
@@ -19,7 +19,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: chalkboard_test
+          POSTGRES_DB: nova_billiard_pos_test
           POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -30,7 +30,7 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/chalkboard_test"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nova_billiard_pos_test"
       NEXTAUTH_SECRET: "test-secret-key-for-github-actions-only"
       NEXTAUTH_URL: "http://localhost:3000"
       DEPLOYMENT_MODE: "test"
@@ -70,7 +70,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: "postgresql://user:password@localhost:5432/chalkboard_build"
+      DATABASE_URL: "postgresql://user:password@localhost:5432/nova_billiard_pos_build"
       NEXTAUTH_SECRET: "build-time-secret-key-for-github-actions-only"
       NEXTAUTH_URL: "http://localhost:3000"
       DEPLOYMENT_MODE: "auto"
@@ -195,11 +195,9 @@ jobs:
           push: false
           tags: ${{ env.IMAGE_NAME }}:test
           build-args: |
-            DATABASE_URL=postgresql://user:password@localhost:5432/chalkboard_build
+            DATABASE_URL=postgresql://user:password@localhost:5432/nova_billiard_pos_build
             NEXTAUTH_SECRET=build-time-secret-key-for-github-actions-only
             NEXTAUTH_URL=http://localhost:3000
-            DEFAULT_EMAIL=admin@example.com
-            DEFAULT_PASSWORD=admin123
             DEPLOYMENT_MODE=auto
             USE_SERVERLESS_DB=false
             DB_POOLING=true

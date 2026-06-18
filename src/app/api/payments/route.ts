@@ -3,8 +3,10 @@ import { db } from '@/lib/db';
 import { payments } from '@/schema/payments';
 import { tableSessions, tables } from '@/schema/tables';
 import { fnbOrders, fnbOrderItems, fnbItems, fnbCategories, staff } from '@/schema/fnb';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { isPaymentMethodId, normalizePaymentMethodSettings } from '@/lib/payment-methods';
+import { assertUnpaid, parsePositiveInt } from '@/lib/transaction-safety';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
     const orderId = searchParams.get('orderId');
 
     let paymentsList: any[];
-    
+
     if (status) {
       paymentsList = await db.select().from(payments)
         .where(eq(payments.status, status))
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
       }).from(tableSessions)
       .where(eq(tableSessions.id, parseInt(sessionId)))
       .limit(1);
-      
+
       if (sessionWithPayment.length > 0 && sessionWithPayment[0].paymentId) {
         paymentsList = await db.select().from(payments)
           .where(eq(payments.id, sessionWithPayment[0].paymentId))
@@ -46,7 +48,7 @@ export async function GET(request: NextRequest) {
       }).from(fnbOrders)
       .where(eq(fnbOrders.id, parseInt(orderId)))
       .limit(1);
-      
+
       if (orderWithPayment.length > 0 && orderWithPayment[0].paymentId) {
         paymentsList = await db.select().from(payments)
           .where(eq(payments.id, orderWithPayment[0].paymentId))
@@ -155,96 +157,134 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      customerName, 
-      customerPhone, 
-      tableAmount = 0, 
-      fnbAmount = 0, 
-      discountAmount = 0, 
-      taxAmount = 0, 
-      totalAmount, 
-      paymentMethods = [], 
+    const {
+      customerName,
+      customerPhone,
+      tableAmount = 0,
+      fnbAmount = 0,
+      discountAmount = 0,
+      taxAmount = 0,
+      totalAmount,
+      paymentMethods = [],
       staffId,
       // Legacy support for existing integrations
-      sessionId, 
-      orderId, 
-      amount, 
-      currency = 'IDR', 
-      paymentMethod 
+      sessionId,
+      orderId,
+      amount,
+      currency = 'IDR',
+      paymentMethod
     } = body;
 
     // Support both new consolidated format and legacy format
     const finalTotalAmount = totalAmount || amount;
     const finalCustomerName = customerName || 'Walk-in Customer';
-    
+
     if (!finalTotalAmount) {
-      return NextResponse.json({ 
-        error: 'Total amount is required' 
+      return NextResponse.json({
+        error: 'Total amount is required'
       }, { status: 400 });
     }
+
+    const primaryPaymentMethod = normalizePaymentMethodSettings(
+      paymentMethods.length > 0 ? paymentMethods : [paymentMethod || 'cash']
+    )[0];
+    const legacyPaymentMethod = isPaymentMethodId(paymentMethod) ? paymentMethod : primaryPaymentMethod;
+
+    const parsedSessionId = parsePositiveInt(sessionId);
+    const parsedOrderId = parsePositiveInt(orderId);
+    const parsedTableId = parsePositiveInt(body.tableId);
 
     // Generate transaction numbers
     const transactionNumber = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const transactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const midtransOrderId = `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Create consolidated payment record
-    const newPayment = await db.insert(payments).values({
-      transactionNumber,
-      customerName: finalCustomerName,
-      customerPhone: customerPhone || null,
-      tableAmount: tableAmount.toString(),
-      fnbAmount: fnbAmount.toString(),
-      discountAmount: discountAmount.toString(),
-      taxAmount: taxAmount.toString(),
-      totalAmount: finalTotalAmount.toString(),
-      paymentMethods: JSON.stringify(paymentMethods.length > 0 ? paymentMethods : [{ type: paymentMethod || 'cash', amount: finalTotalAmount }]),
-      staffId: staffId || null,
-      status: 'pending',
-      
-      // Legacy Midtrans fields (for backward compatibility)
-      transactionId,
-      midtransOrderId,
-      amount: finalTotalAmount.toString(),
-      currency,
-      paymentMethod: paymentMethod || 'cash',
-      
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning();
+    const newPayment = await db.transaction(async (tx) => {
+      if (parsedSessionId) {
+        const [targetSession] = await tx.select({ id: tableSessions.id, paymentId: tableSessions.paymentId })
+          .from(tableSessions)
+          .where(eq(tableSessions.id, parsedSessionId))
+          .limit(1);
 
-    const paymentId = newPayment[0].id;
+        if (!targetSession) throw new Error('Session not found');
+        assertUnpaid(targetSession, 'Session');
+      }
 
-    // Update reverse references if sessionId or orderId provided
-    if (sessionId) {
-      await db.update(tableSessions)
-        .set({ paymentId })
-        .where(eq(tableSessions.id, parseInt(sessionId)));
-    }
+      if (parsedOrderId) {
+        const [targetOrder] = await tx.select({ id: fnbOrders.id, paymentId: fnbOrders.paymentId })
+          .from(fnbOrders)
+          .where(eq(fnbOrders.id, parsedOrderId))
+          .limit(1);
 
-    if (orderId) {
-      await db.update(fnbOrders)
-        .set({ paymentId })
-        .where(eq(fnbOrders.id, parseInt(orderId)));
-    }
+        if (!targetOrder) throw new Error('Order not found');
+        assertUnpaid(targetOrder, 'Order');
+      }
 
-    // Link pending FnB orders for this table to the payment (checkout flow)
-    const tableId = body.tableId;
-    if (tableId) {
-      await db.update(fnbOrders)
-        .set({ paymentId, status: 'billed' })
-        .where(and(
-          eq(fnbOrders.tableId, parseInt(String(tableId))),
-          eq(fnbOrders.status, 'pending')
-        ));
-    }
+      const [payment] = await tx.insert(payments).values({
+        transactionNumber,
+        customerName: finalCustomerName,
+        customerPhone: customerPhone || null,
+        tableAmount: tableAmount.toString(),
+        fnbAmount: fnbAmount.toString(),
+        discountAmount: discountAmount.toString(),
+        taxAmount: taxAmount.toString(),
+        totalAmount: finalTotalAmount.toString(),
+        paymentMethods: JSON.stringify(paymentMethods.length > 0 ? paymentMethods : [{ type: legacyPaymentMethod, amount: finalTotalAmount }]),
+        staffId: staffId || null,
+        status: 'pending',
+        transactionId,
+        midtransOrderId,
+        amount: finalTotalAmount.toString(),
+        currency,
+        paymentMethod: legacyPaymentMethod,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+
+      const paymentId = payment.id;
+
+      if (parsedSessionId) {
+        const updated = await tx.update(tableSessions)
+          .set({ paymentId })
+          .where(and(eq(tableSessions.id, parsedSessionId), isNull(tableSessions.paymentId)))
+          .returning({ id: tableSessions.id });
+        if (updated.length === 0) throw new Error('Session already has a payment');
+      }
+
+      if (parsedOrderId) {
+        const updated = await tx.update(fnbOrders)
+          .set({ paymentId })
+          .where(and(eq(fnbOrders.id, parsedOrderId), isNull(fnbOrders.paymentId)))
+          .returning({ id: fnbOrders.id });
+        if (updated.length === 0) throw new Error('Order already has a payment');
+      }
+
+      if (parsedTableId) {
+        await tx.update(fnbOrders)
+          .set({ paymentId, status: 'billed' })
+          .where(and(
+            eq(fnbOrders.tableId, parsedTableId),
+            eq(fnbOrders.status, 'pending'),
+            isNull(fnbOrders.paymentId)
+          ));
+      }
+
+      return payment;
+    });
 
     return NextResponse.json({
-      ...newPayment[0],
+      ...newPayment,
       message: 'Payment created successfully'
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating payment:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create payment';
+    if (message.includes('already has a payment')) {
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+    if (message.includes('not found')) {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 });
   }
-} 
+}

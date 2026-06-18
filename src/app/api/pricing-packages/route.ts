@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { pricingPackages, type NewPricingPackage } from "@/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { attachIncludedItemsToPackages, savePackageIncludedItems } from "@/lib/pricing-package-bundle-store";
 
 const createPackageSchema = z.object({
   name: z.string().min(1).max(255),
@@ -14,6 +15,10 @@ const createPackageSchema = z.object({
   isDefault: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.string().optional(),
+  includedItems: z.array(z.object({
+    itemId: z.number().int().positive(),
+    quantity: z.number().int().positive(),
+  })).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -50,7 +55,7 @@ export async function GET(req: NextRequest) {
         .orderBy(pricingPackages.sortOrder);
     }
     
-    return NextResponse.json(packages);
+    return NextResponse.json(await attachIncludedItemsToPackages(packages));
   } catch (error) {
     console.error("Error fetching pricing packages:", error);
     return NextResponse.json(
@@ -108,7 +113,9 @@ export async function POST(req: NextRequest) {
       .values(newPackage)
       .returning();
 
-    return NextResponse.json(created, { status: 201 });
+    const includedItems = await savePackageIncludedItems(created.id, validatedData.includedItems || []);
+
+    return NextResponse.json({ ...created, includedItems }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -26,7 +26,7 @@ function getPgliteDataDir(): string {
   if (process.env.DEPLOYMENT_MODE === 'desktop') {
     const os = require('os');
     const path = require('path');
-    const appName = 'com.kugie.chalkboard';
+    const appName = 'com.nova.billiardpos';
     const platform = process.platform;
     if (platform === 'win32') {
       return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), appName, 'data');
@@ -36,7 +36,7 @@ function getPgliteDataDir(): string {
       return path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), appName, 'data');
     }
   }
-  return 'idb://chalkboard-db';
+  return 'idb://nova-billiard-pos-db';
 }
 
 /**
@@ -56,7 +56,7 @@ function createConnectionString(): string | null {
   // Build connection string from individual components (for local deployment)
   const host = config.database.host || 'localhost';
   const port = config.database.port || 5432;
-  const database = config.database.database || 'chalkboard';
+  const database = config.database.database || 'nova_billiard_pos';
   const username = config.database.username || 'postgres';
   const password = config.database.password || 'postgres';
 
@@ -145,12 +145,28 @@ function createDatabaseConnection() {
   return drizzlePostgres(client, { schema });
 }
 
-export const db = createDatabaseConnection();
+// Cache the connection on globalThis so Next.js dev HMR module reloads reuse the
+// SAME instance instead of creating a new one each time. Creating multiple PGlite
+// (WASM) instances against the same data dir causes "RuntimeError: Aborted()" and
+// queries that hang ~35s before failing. This also prevents re-running migrations
+// on every hot reload.
+type DbConnection = ReturnType<typeof createDatabaseConnection>;
+const globalForDb = globalThis as unknown as {
+  __novaDb?: DbConnection;
+  __novaDbReady?: Promise<void> | null;
+};
+
+export const db: DbConnection = globalForDb.__novaDb ?? createDatabaseConnection();
+
+if (!globalForDb.__novaDb) {
+  globalForDb.__novaDb = db;
+  globalForDb.__novaDbReady = _dbReady;
+}
 
 export { schema };
 
 // Promise that resolves when PGlite migrations are complete (no-op for other providers)
-export const dbReady: Promise<void> = _dbReady ?? Promise.resolve();
+export const dbReady: Promise<void> = globalForDb.__novaDbReady ?? _dbReady ?? Promise.resolve();
 
 // Export connection info for debugging
 export const connectionInfo = {
@@ -158,4 +174,4 @@ export const connectionInfo = {
   provider: config.provider,
   useServerless: config.database.useServerless,
   pooling: config.database.pooling,
-}; 
+};

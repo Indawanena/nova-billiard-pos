@@ -102,7 +102,28 @@ const tryTauriRawPrint = async (html: string) => {
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
-  const printerName = window.localStorage.getItem("chalkboard_thermal_printer") || DEFAULT_THERMAL_PRINTER;
+  const printerConnection = window.localStorage.getItem("nova_billiard_pos_printer_connection") || "desktop";
+  if (printerConnection === "browser") {
+    return false;
+  }
+
+  if (printerConnection === "lan") {
+    const host = window.localStorage.getItem("nova_billiard_pos_printer_lan_host") || "";
+    const port = Number(window.localStorage.getItem("nova_billiard_pos_printer_lan_port") || "9100");
+
+    if (host && Number.isFinite(port)) {
+      await invoke("print_receipt_lan", {
+        receipt: htmlToReceiptText(html),
+        host,
+        port,
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  const printerName = window.localStorage.getItem("nova_billiard_pos_thermal_printer") || DEFAULT_THERMAL_PRINTER;
   await invoke("print_receipt_raw", {
     receipt: htmlToReceiptText(html),
     printerName,

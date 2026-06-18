@@ -22,7 +22,7 @@ DEFAULT_LOCALE = "en"
 DB_POOLING = "true"
 
 [services.web]
-name = "chalkboard-web"
+name = "nova-billiard-pos-web"
 source = "."
 
 [services.web.variables]

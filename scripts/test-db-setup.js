@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 console.log('🧪 Testing database setup for CI...\n');
 
 // Check if we have a local PostgreSQL setup
-const localDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/chalkboard_test';
+const localDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nova_billiard_pos_test';
 
 try {
   console.log('1. Setting up test environment...');
@@ -30,8 +30,8 @@ try {
   
   console.log('\n🔍 Troubleshooting tips:');
   console.log('- Make sure PostgreSQL is running: brew services start postgresql');
-  console.log('- Create test database: createdb chalkboard_test');
-  console.log('- Check connection: psql postgresql://postgres:postgres@localhost:5432/chalkboard_test');
+  console.log('- Create test database: createdb nova_billiard_pos_test');
+  console.log('- Check connection: psql postgresql://postgres:postgres@localhost:5432/nova_billiard_pos_test');
   
   process.exit(1);
 }

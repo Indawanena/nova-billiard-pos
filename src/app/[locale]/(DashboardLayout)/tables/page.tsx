@@ -771,6 +771,28 @@ const TablesManagement = () => {
     }
   };
 
+  const handleAddSessionTime = async (sessionId: number, minutes: number) => {
+    try {
+      const response = await fetch(`/api/table-sessions/${sessionId}/add-time`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes }),
+      });
+
+      if (response.ok) {
+        const updatedSession = await response.json();
+        setSelectedSession(updatedSession);
+        showAlert('success', `Tambah ${minutes} menit berhasil`);
+        fetchTables();
+      } else {
+        const error = await response.json();
+        showAlert('error', error.message || 'Gagal menambah jam main');
+      }
+    } catch (error) {
+      showAlert('error', 'Gagal menambah jam main');
+    }
+  };
+
   const handleSessionMove = (newTableId: number, newTableName: string) => {
     showAlert('success', tAlerts('sessionMovedSuccess', { tableName: newTableName }));
     setShowMoveSessionModal(false);
@@ -826,7 +848,7 @@ const TablesManagement = () => {
       .then(res => res.json())
       .then(data => {
         const s = data.settings || {};
-        const storeName = (s.store_name || 'CHALKBOARD BILLIARD').trim();
+        const storeName = (s.store_name || 'NOVA BILLIARD POS').trim();
         const storeAddress = (s.store_address || '').trim();
         const storePhone = (s.store_phone || '').trim();
         const storeNotes = (s.store_notes || '').trim();
@@ -1940,7 +1962,9 @@ const TablesManagement = () => {
               sessionId={selectedSession.id}
               currentDurationType={(selectedSession as any).durationType || 'hourly'}
               elapsedMinutes={calculateElapsedTime(selectedSession.startTime) / 60}
+              plannedDuration={selectedSession.plannedDuration}
               onDurationUpdate={(newDuration) => handleDurationUpdate(selectedSession.id, newDuration)}
+              onAddTime={(minutes) => handleAddSessionTime(selectedSession.id, minutes)}
             />
           )}
         </Modal.Body>

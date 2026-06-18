@@ -9,7 +9,7 @@ import { getServerSession } from 'next-auth';
 
 // Ensure NEXTAUTH_SECRET has a fallback for desktop mode
 if (!process.env.NEXTAUTH_SECRET && process.env.DEPLOYMENT_MODE === 'desktop') {
-  process.env.NEXTAUTH_SECRET = 'chalkboard-desktop-secret';
+  process.env.NEXTAUTH_SECRET = 'nova-billiard-pos-desktop-secret';
 }
 
 const authOptions: AuthOptions = {
@@ -27,20 +27,6 @@ const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
-        }
-
-        // Check for default admin credentials from environment
-        const defaultEmail = process.env.DEFAULT_EMAIL;
-        const defaultPassword = process.env.DEFAULT_PASSWORD;
-
-        if (defaultEmail && defaultPassword &&
-            credentials.email === defaultEmail && credentials.password === defaultPassword) {
-          return {
-            id: '1',
-            email: defaultEmail,
-            name: 'ChalkBoard Admin',
-            role: 'admin',
-          };
         }
 
         // Ensure PGlite migrations are complete before querying
@@ -73,7 +59,7 @@ const authOptions: AuthOptions = {
         return {
           id: dbUser.id.toString(),
           email: dbUser.email,
-          name: dbUser.name || 'ChalkBoard User',
+          name: dbUser.name || 'Nova Billiard POS User',
           role: dbUser.role || 'staff',
         };
       }
@@ -117,4 +103,4 @@ declare module 'next-auth' {
       role?: string;
     };
   }
-} 
+}

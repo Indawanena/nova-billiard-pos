@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { systemSettings } from '@/schema/settings';
 import { eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     const settings = await db.select().from(systemSettings).where(eq(systemSettings.isActive, true));
     
@@ -27,10 +25,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAdmin();
+    if (!authResult.ok) return authResult.response;
 
     const { key, value, description } = await request.json();
 

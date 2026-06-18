@@ -4,7 +4,6 @@ import {
   fnbCategories, 
   fnbItems, 
   staff, 
-  users, 
   tableSessions, 
   fnbOrders, 
   fnbOrderItems, 
@@ -97,19 +96,10 @@ export async function seedDatabase() {
     const createdStaff = await db.insert(staff).values(sampleStaff).returning();
     console.log(`✅ Created ${createdStaff.length} staff members`);
 
-    // Create users with different roles
-    const sampleUsers = [
-      { name: 'Admin User', email: 'admin@chalkboard.com', role: 'admin', password: 'hashed_password_1' },
-      { name: 'Manager Ahmad', email: 'ahmad@chalkboard.com', role: 'manager', password: 'hashed_password_2' },
-      { name: 'Staff Sarah', email: 'sarah@chalkboard.com', role: 'staff', password: 'hashed_password_3' },
-      { name: 'Staff Budi', email: 'budi@chalkboard.com', role: 'staff', password: 'hashed_password_4' },
-      { name: 'Staff Diana', email: 'diana@chalkboard.com', role: 'staff', password: 'hashed_password_5' },
-      { name: 'Staff Eko', email: 'eko@chalkboard.com', role: 'staff', password: 'hashed_password_6' },
-    ];
-
-    console.log('👤 Creating users...');
-    const createdUsers = await db.insert(users).values(sampleUsers).returning();
-    console.log(`✅ Created ${createdUsers.length} users`);
+    // Do not seed login users or reusable admin credentials.
+    // The first account created through the sign-up flow becomes the admin.
+    console.log('👤 Skipping user seed; create the first admin account in the app.');
+    const createdUsers: unknown[] = [];
 
     // Create table sessions (last 30 days)
     const sampleTableSessions = [];

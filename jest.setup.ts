@@ -4,8 +4,8 @@ import '@testing-library/jest-dom'
 // Mock environment variables for testing
 // In CI, use the service container database, locally use port 5433 for test database
 process.env.DATABASE_URL = process.env.DATABASE_URL || 
-  (process.env.CI ? 'postgresql://postgres:postgres@localhost:5432/chalkboard_test' : 
-   'postgresql://postgres:postgres@localhost:5433/chalkboard_test')
+  (process.env.CI ? 'postgresql://postgres:postgres@localhost:5432/nova_billiard_pos_test' :
+   'postgresql://postgres:postgres@localhost:5433/nova_billiard_pos_test')
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-secret-key'
 process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 process.env.DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE || 'test'

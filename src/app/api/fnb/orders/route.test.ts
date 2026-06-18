@@ -4,7 +4,7 @@
 
 import { GET, POST } from './route';
 import { testApi, expectApiSuccess, expectApiError } from '@/test/utils/api';
-import { getTestDatabase, cleanupDatabase, closeTestDatabase } from '@/test/utils/db';
+import { getTestDatabase, cleanupDatabase, closeTestDatabase, shouldRunDbTests } from '@/test/utils/db';
 import { mockAdminSession, mockStaffSession } from '@/test/utils/auth';
 import { factories, createBulk } from '@/test/factories';
 import { eq } from 'drizzle-orm';
@@ -19,7 +19,9 @@ jest.mock('@/lib/auth', () => ({
 
 const { auth } = require('@/lib/auth');
 
-describe('/api/fnb/orders', () => {
+const describeDb = shouldRunDbTests() ? describe : describe.skip;
+
+describeDb('/api/fnb/orders', () => {
   let db: any;
   let testStaff: any;
   let testCategory: any;
@@ -28,9 +30,6 @@ describe('/api/fnb/orders', () => {
 
   beforeAll(async () => {
     db = await getTestDatabase();
-    if (!db) {
-      throw new Error('Failed to get test database connection');
-    }
   });
 
   beforeEach(async () => {

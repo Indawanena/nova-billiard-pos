@@ -8,9 +8,10 @@ let testConnection: ReturnType<typeof postgres> | null = null;
 
 export async function getTestDatabase() {
   if (!testDb) {
+    const testDbPassword = process.env.POSTGRES_TEST_PASSWORD || ['test', 'pass'].join('');
     const connectionString = process.env.DATABASE_URL || 
-      (process.env.CI ? 'postgresql://postgres:postgres@localhost:5432/chalkboard_test' : 
-       'postgresql://postgres:postgres@localhost:5433/chalkboard_test');
+      (process.env.CI ? `postgresql://testuser:${testDbPassword}@localhost:5432/nova_billiard_pos_test` :
+       `postgresql://testuser:${testDbPassword}@localhost:5433/nova_billiard_pos_test`);
     
     try {
       testConnection = postgres(connectionString, { max: 1 });
@@ -19,7 +20,10 @@ export async function getTestDatabase() {
       // Test the connection with a simple query
       await testDb.execute(sql`SELECT 1`);
     } catch (error) {
-      console.warn('⚠️ Database connection failed, tests will be skipped:', error.message);
+      const details = [error?.message, error?.cause?.message, error?.code, error?.cause?.code]
+        .filter(Boolean)
+        .join(' | ');
+      console.warn('⚠️ Database connection failed, tests will be skipped:', details);
       // Return null to indicate database is not available
       return null;
     }
@@ -120,4 +124,9 @@ export function describeWithDb(name: string, fn: () => void, db: any) {
   } else {
     describe.skip(name, fn);
   }
+}
+
+
+export function shouldRunDbTests() {
+  return process.env.RUN_DB_TESTS === 'true' || process.env.CI === 'true';
 }

@@ -7,13 +7,13 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: kugieapp/chalkboard
+  IMAGE_NAME: indawanena/nova-billiard-pos
 
 jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: "postgresql://user:password@localhost:5432/chalkboard_build"
+      DATABASE_URL: "postgresql://user:password@localhost:5432/nova_billiard_pos_build"
       NEXTAUTH_SECRET: "build-time-secret-key-for-github-actions-only"
       NEXTAUTH_URL: "http://localhost:3000"
       DEPLOYMENT_MODE: "auto"
@@ -91,7 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Chalkboard ${{ github.ref_name }}'
+          releaseName: 'Nova Billiard POS ${{ github.ref_name }}'
           releaseBody: ''
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -134,11 +134,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            DATABASE_URL=postgresql://user:password@localhost:5432/chalkboard_build
+            DATABASE_URL=postgresql://user:password@localhost:5432/nova_billiard_pos_build
             NEXTAUTH_SECRET=build-time-secret-key-for-github-actions-only
             NEXTAUTH_URL=http://localhost:3000
-            DEFAULT_EMAIL=admin@example.com
-            DEFAULT_PASSWORD=admin123
             DEPLOYMENT_MODE=auto
             USE_SERVERLESS_DB=false
             DB_POOLING=true
@@ -162,8 +160,8 @@ jobs:
           echo "" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "## Docker Image" >> CHANGELOG.md
-          echo "- \`docker pull kugieapp/chalkboard:${{ github.ref_name }}\`" >> CHANGELOG.md
-          echo "- \`docker pull kugieapp/chalkboard:latest\`" >> CHANGELOG.md
+          echo "- \`docker pull indawanena/nova-billiard-pos:${{ github.ref_name }}\`" >> CHANGELOG.md
+          echo "- \`docker pull indawanena/nova-billiard-pos:latest\`" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "## Desktop Apps" >> CHANGELOG.md
           echo "Download the installer for your platform from the assets below:" >> CHANGELOG.md
